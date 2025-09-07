@@ -9,6 +9,7 @@ import { UsersModule } from './modules/users/users.module';
 import { ListingsModule } from './modules/listings/listings.module';
 import { SearchModule } from './modules/search/search.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { MetadataModule } from './modules/metadata/metadata.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { AdminModule } from './modules/admin/admin.module';
     ListingsModule,
     SearchModule,
     AdminModule,
+    MetadataModule,
   ],
   controllers: [AppController],
   providers: [AppService],

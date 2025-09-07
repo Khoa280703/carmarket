@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { Search, Filter, Car, MapPin, Calendar, Fuel } from "lucide-react";
+import { Search, Filter, Car } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
-import { Card, CardContent, CardTitle } from "../components/ui/Card";
-import { formatPrice, formatNumber } from "../lib/utils";
+import { Card, CardContent } from "../components/ui/Card";
+import { CarCard } from "../components/CarCard";
 import type { ListingDetail } from "../types";
-import { apiClient } from "../lib/api";
+import { ListingService } from "../services/listing.service";
 
 export function HomePage() {
   const [listings, setListings] = useState<ListingDetail[]>([]);
@@ -19,10 +19,10 @@ export function HomePage() {
   const fetchListings = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get<{ listings: ListingDetail[] }>(
-        "/listings"
-      );
-      setListings(response.listings);
+      const response = (await ListingService.getListings()) as {
+        listings: ListingDetail[];
+      };
+      setListings(response.listings || []);
     } catch (error) {
       console.error("Failed to fetch listings:", error);
     } finally {
@@ -99,59 +99,7 @@ export function HomePage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {listings.slice(0, 6).map((listing) => (
-                <Card
-                  key={listing.id}
-                  className="hover:shadow-lg transition-shadow cursor-pointer"
-                >
-                  <div className="relative h-48 bg-gray-200 rounded-t-lg overflow-hidden">
-                    {listing.carDetail.images.length > 0 ? (
-                      <img
-                        src={listing.carDetail.images[0].url}
-                        alt={listing.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full">
-                        <Car className="h-12 w-12 text-gray-400" />
-                      </div>
-                    )}
-                    {listing.isFeatured && (
-                      <div className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 px-2 py-1 rounded text-xs font-medium">
-                        Featured
-                      </div>
-                    )}
-                  </div>
-
-                  <CardContent className="p-6">
-                    <CardTitle className="text-lg mb-2 line-clamp-1">
-                      {listing.carDetail.year} {listing.carDetail.make}{" "}
-                      {listing.carDetail.model}
-                    </CardTitle>
-
-                    <div className="text-2xl font-bold text-blue-600 mb-4">
-                      {formatPrice(listing.price)}
-                    </div>
-
-                    <div className="space-y-2 text-sm text-gray-600">
-                      <div className="flex items-center">
-                        <Calendar className="h-4 w-4 mr-2" />
-                        {listing.carDetail.year}
-                      </div>
-                      <div className="flex items-center">
-                        <Car className="h-4 w-4 mr-2" />
-                        {formatNumber(listing.carDetail.mileage)} miles
-                      </div>
-                      <div className="flex items-center">
-                        <Fuel className="h-4 w-4 mr-2" />
-                        {listing.carDetail.fuelType}
-                      </div>
-                      <div className="flex items-center">
-                        <MapPin className="h-4 w-4 mr-2" />
-                        {listing.location}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <CarCard key={listing.id} listing={listing} />
               ))}
             </div>
           )}

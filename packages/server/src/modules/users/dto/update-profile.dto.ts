@@ -1,4 +1,11 @@
-import { IsEmail, IsOptional, IsString, Matches } from 'class-validator';
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  Matches,
+  ValidateIf,
+  IsDateString,
+} from 'class-validator';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -14,6 +21,7 @@ export class UpdateProfileDto {
   lastName?: string;
 
   @IsOptional()
+  @ValidateIf((o) => o.phoneNumber !== undefined && o.phoneNumber !== '')
   @IsString({ message: 'Phone number must be a string' })
   @Matches(/^[\+]?[1-9][\d]{0,15}$/, {
     message: 'Please provide a valid phone number',
@@ -23,4 +31,16 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString({ message: 'Profile image must be a string' })
   profileImage?: string;
+
+  @IsOptional()
+  @IsString({ message: 'Bio must be a string' })
+  bio?: string;
+
+  @IsOptional()
+  @IsString({ message: 'Location must be a string' })
+  location?: string;
+
+  @IsOptional()
+  @IsDateString({}, { message: 'Please provide a valid date of birth' })
+  dateOfBirth?: string;
 }

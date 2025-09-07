@@ -39,6 +39,15 @@ export class User {
   @Column({ nullable: true })
   profileImage: string;
 
+  @Column({ nullable: true, type: 'text' })
+  bio: string;
+
+  @Column({ nullable: true })
+  location: string;
+
+  @Column({ nullable: true, type: 'date' })
+  dateOfBirth: Date;
+
   @Column({
     type: 'enum',
     enum: UserRole,
