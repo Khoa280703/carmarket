@@ -93,7 +93,13 @@ export class ListingsController {
   async uploadCarImages(
     @UploadedFiles() files: Express.Multer.File[],
   ): Promise<{
-    images: Array<{ filename: string; url: string; originalName: string }>;
+    images: Array<{
+      filename: string;
+      url: string;
+      originalName: string;
+      fileSize: number;
+      mimeType: string;
+    }>;
   }> {
     if (!files || files.length === 0) {
       throw new Error('No files uploaded');
@@ -103,6 +109,8 @@ export class ListingsController {
       filename: file.filename,
       originalName: file.originalname,
       url: `/uploads/cars/${file.filename}`,
+      fileSize: file.size,
+      mimeType: file.mimetype,
     }));
 
     return { images };

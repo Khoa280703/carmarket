@@ -50,9 +50,4 @@ export class CarMetadata {
 
   @UpdateDateColumn()
   updatedAt: Date;
-
-  // Virtual property for display
-  get displayName(): string {
-    return this.displayValue || this.value;
-  }
 }

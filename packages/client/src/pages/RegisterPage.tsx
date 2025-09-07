@@ -53,10 +53,15 @@ export function RegisterPage() {
   const onSubmit = async (data: RegisterForm) => {
     try {
       await registerUser(data);
-      toast.success("Account created successfully!");
+      toast.success(
+        "🎉 Welcome to CarMarket! Your account has been created successfully."
+      );
       navigate("/");
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Registration failed");
+      const errorMessage =
+        error.response?.data?.message ||
+        "Registration failed. Please check your information and try again.";
+      toast.error(errorMessage);
     }
   };
 

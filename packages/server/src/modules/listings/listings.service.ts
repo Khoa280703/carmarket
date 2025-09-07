@@ -11,7 +11,7 @@ import {
   ListingStatus,
 } from '../../entities/listing-detail.entity';
 import { CarDetail } from '../../entities/car-detail.entity';
-import { CarImage } from '../../entities/car-image.entity';
+import { CarImage, ImageType } from '../../entities/car-image.entity';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 
@@ -50,9 +50,16 @@ export class ListingsService {
     if (images && images.length > 0) {
       const carImages = images.map((image, index) =>
         this.carImageRepository.create({
-          ...image,
-          carDetailId: savedCarDetail.id,
+          filename: image.filename,
+          originalName: image.originalName,
+          url: image.url,
+          type: (image.type as ImageType) || ImageType.EXTERIOR,
           sortOrder: index,
+          isPrimary: index === 0,
+          alt: image.alt,
+          carDetailId: savedCarDetail.id,
+          fileSize: image.fileSize || 0,
+          mimeType: image.mimeType || 'image/jpeg',
         }),
       );
       await this.carImageRepository.save(carImages);

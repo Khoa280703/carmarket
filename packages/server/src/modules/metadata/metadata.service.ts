@@ -54,6 +54,7 @@ export class MetadataService {
       priceTypes,
       carFeatures,
       colors,
+      makes,
     ] = await Promise.all([
       this.getMetadataByType(MetadataType.FUEL_TYPE),
       this.getMetadataByType(MetadataType.TRANSMISSION_TYPE),
@@ -62,6 +63,7 @@ export class MetadataService {
       this.getMetadataByType(MetadataType.PRICE_TYPE),
       this.getMetadataByType(MetadataType.CAR_FEATURE),
       this.getMetadataByType(MetadataType.COLOR),
+      this.getAllMakes(),
     ]);
 
     return {
@@ -72,6 +74,7 @@ export class MetadataService {
       priceTypes,
       carFeatures,
       colors,
+      makes,
     };
   }
 

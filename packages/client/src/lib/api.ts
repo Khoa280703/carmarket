@@ -13,6 +13,9 @@ class ApiClient {
       timeout: 10000,
       headers: {
         "Content-Type": "application/json",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
       },
     });
 
@@ -49,6 +52,10 @@ class ApiClient {
           localStorage.removeItem("accessToken");
           localStorage.removeItem("user");
           window.location.href = "/login";
+        } else if (error.response?.status === 304) {
+          // Handle 304 Not Modified - return the cached data
+          console.log("304 Not Modified response received");
+          return Promise.resolve(error.response);
         }
         return Promise.reject(error);
       }

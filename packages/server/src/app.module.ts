@@ -10,6 +10,8 @@ import { ListingsModule } from './modules/listings/listings.module';
 import { SearchModule } from './modules/search/search.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { MetadataModule } from './modules/metadata/metadata.module';
+import { FavoritesModule } from './modules/favorites/favorites.module';
+import { ChatModule } from './modules/chat/chat.module';
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { MetadataModule } from './modules/metadata/metadata.module';
     SearchModule,
     AdminModule,
     MetadataModule,
+    FavoritesModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

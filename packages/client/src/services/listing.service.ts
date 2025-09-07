@@ -36,6 +36,8 @@ export interface CreateListingPayload {
     url: string;
     type?: string;
     alt?: string;
+    fileSize?: number;
+    mimeType?: string;
   }[];
 }
 
@@ -69,10 +71,14 @@ export class ListingService {
     return apiClient.get<SearchResponse>("/search", filters);
   }
 
-  static async uploadCarImages(
-    files: File[]
-  ): Promise<{
-    images: Array<{ filename: string; url: string; originalName: string }>;
+  static async uploadCarImages(files: File[]): Promise<{
+    images: Array<{
+      filename: string;
+      url: string;
+      originalName: string;
+      fileSize: number;
+      mimeType: string;
+    }>;
   }> {
     const formData = new FormData();
     files.forEach((file) => {
@@ -80,7 +86,13 @@ export class ListingService {
     });
 
     return apiClient.post<{
-      images: Array<{ filename: string; url: string; originalName: string }>;
+      images: Array<{
+        filename: string;
+        url: string;
+        originalName: string;
+        fileSize: number;
+        mimeType: string;
+      }>;
     }>("/listings/upload-images", formData);
   }
 

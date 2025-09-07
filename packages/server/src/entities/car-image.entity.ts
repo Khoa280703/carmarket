@@ -43,10 +43,10 @@ export class CarImage {
   @Column({ default: false })
   isPrimary: boolean;
 
-  @Column()
+  @Column({ nullable: true })
   fileSize: number; // in bytes
 
-  @Column()
+  @Column({ nullable: true })
   mimeType: string;
 
   @Column({ nullable: true })

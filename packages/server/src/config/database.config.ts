@@ -9,6 +9,9 @@ import { Transaction } from '../entities/transaction.entity';
 import { CarMake } from '../entities/car-make.entity';
 import { CarModel } from '../entities/car-model.entity';
 import { CarMetadata } from '../entities/car-metadata.entity';
+import { Favorite } from '../entities/favorite.entity';
+import { ChatConversation } from '../entities/chat-conversation.entity';
+import { ChatMessage } from '../entities/chat-message.entity';
 
 @Injectable()
 export class DatabaseConfig implements TypeOrmOptionsFactory {
@@ -31,6 +34,9 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
         CarMake,
         CarModel,
         CarMetadata,
+        Favorite,
+        ChatConversation,
+        ChatMessage,
       ],
       synchronize: this.configService.get<string>('NODE_ENV') === 'development',
       logging: this.configService.get<string>('NODE_ENV') === 'development',
