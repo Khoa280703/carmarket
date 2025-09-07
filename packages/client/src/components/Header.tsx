@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Car, User, LogOut, Plus, Shield } from "lucide-react";
 import { useAuthStore } from "../store/auth";
 import { Button } from "./ui/Button";
+import { Avatar } from "./ui/Avatar";
 
 export function Header() {
   const { user, isAuthenticated, logout } = useAuthStore();
@@ -53,7 +54,15 @@ export function Header() {
 
                 <div className="relative group">
                   <button className="flex items-center space-x-2 text-gray-600 hover:text-gray-900">
-                    <User className="h-5 w-5" />
+                    <Avatar
+                      src={
+                        user?.profileImage
+                          ? `http://localhost:3000${user.profileImage}`
+                          : undefined
+                      }
+                      alt="Profile"
+                      size="sm"
+                    />
                     <span className="hidden sm:block">{user?.firstName}</span>
                   </button>
 

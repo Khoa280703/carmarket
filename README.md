@@ -24,7 +24,15 @@ Create these files with your settings:
 - `packages/server/.env` (copy from `packages/server/env.example`)
 - `packages/client/.env` (copy from `packages/client/env.example`)
 
-### 3. Run Development
+### 3. Seed Initial Data
+
+After starting the server, seed the car metadata (requires admin token):
+
+```bash
+curl -X POST http://localhost:3000/api/metadata/seed
+```
+
+### 4. Run Development
 
 **Option A: Both together**
 
@@ -61,13 +69,13 @@ npm run db:down  # Stop database
 
 ## Features
 
-- 🔐 JWT Authentication (register, login, password reset)
-- 🚗 Car listings with image upload support
-- 🔍 Advanced search and filtering
-- 👤 User profiles and dashboard
-- 🛡️ Admin panel for managing users and listings
-- 📱 Responsive design with Tailwind CSS
-- 🔄 Real-time updates and notifications
+- 🔐 **Authentication**: Register, login, password reset with JWT
+- 👤 **User Profiles**: Complete profile management with avatar upload
+- 🚗 **Car Listings**: Create, edit, delete listings with image support
+- 🔍 **Advanced Search**: Filter by make, model, price, year, location
+- 🛡️ **Admin Panel**: User management and listing approval workflow
+- 📱 **Responsive Design**: Modern UI with Tailwind CSS v4
+- 🔄 **Real-time Updates**: Live notifications and data updates
 
 ## Project Structure
 
@@ -82,11 +90,50 @@ carmarket/
 
 ## API Endpoints
 
+**Authentication:**
+
 - `POST /api/auth/register` - User registration
 - `POST /api/auth/login` - User login
-- `GET /api/listings` - Get car listings
+- `POST /api/auth/forgot-password` - Request password reset
+
+**Profile Management:**
+
+- `GET /api/users/profile` - Get user profile
+- `PUT /api/users/profile` - Update profile information
+- `POST /api/users/upload-avatar` - Upload profile avatar
+- `POST /api/users/change-password` - Change password
+
+**Listings:**
+
+- `GET /api/listings` - Get all approved listings
+- `GET /api/listings/:id` - Get listing details
+- `POST /api/listings` - Create new listing
+- `PATCH /api/listings/:id` - Update listing
+- `DELETE /api/listings/:id` - Delete listing
+- `POST /api/listings/upload-images` - Upload car images
 - `GET /api/search` - Search with filters
-- `GET /api/admin/*` - Admin endpoints (protected)
+
+**Car Metadata:**
+
+- `GET /api/metadata/all` - Get all car metadata (fuel types, body types, etc.)
+- `GET /api/metadata/makes` - Get all car makes
+- `GET /api/metadata/makes/:id/models` - Get models for a specific make
+- `GET /api/metadata/fuel-types` - Get fuel types
+- `GET /api/metadata/body-types` - Get body types
+- `GET /api/metadata/car-features` - Get available car features
+
+**Admin (Protected):**
+
+- `GET /api/admin/dashboard/stats` - Dashboard statistics
+- `GET /api/admin/listings/pending` - Pending listings for approval
+- `GET /api/metadata/admin/all` - Get all metadata for admin management
+- `POST /api/metadata/seed` - Seed initial car metadata
+- `POST /api/metadata/makes` - Create new car make
+- `PUT /api/metadata/makes/:id` - Update car make
+- `DELETE /api/metadata/makes/:id` - Delete car make
+- `POST /api/metadata/metadata` - Create new metadata
+- `PUT /api/metadata/metadata/:id` - Update metadata
+- `DELETE /api/metadata/metadata/:id` - Delete metadata
 
 ## Environment Variables
 

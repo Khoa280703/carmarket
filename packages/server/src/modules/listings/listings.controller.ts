@@ -9,7 +9,12 @@ import {
   UseGuards,
   Query,
   ParseIntPipe,
+  UseInterceptors,
+  UploadedFiles,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 import { ListingsService } from './listings.service';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
@@ -57,5 +62,49 @@ export class ListingsController {
   @Delete(':id')
   remove(@Param('id') id: string, @CurrentUser() user: User) {
     return this.listingsService.remove(id, user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('upload-images')
+  @UseInterceptors(
+    FilesInterceptor('images', 10, {
+      storage: diskStorage({
+        destination: './uploads/cars',
+        filename: (req, file, cb) => {
+          const randomName = Array(32)
+            .fill(null)
+            .map(() => Math.round(Math.random() * 16).toString(16))
+            .join('');
+          cb(null, `${randomName}${extname(file.originalname)}`);
+        },
+      }),
+      fileFilter: (req, file, cb) => {
+        if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+          return cb(new Error('Only image files are allowed!'), false);
+        }
+        cb(null, true);
+      },
+      limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB per file
+        files: 10, // Maximum 10 files
+      },
+    }),
+  )
+  async uploadCarImages(
+    @UploadedFiles() files: Express.Multer.File[],
+  ): Promise<{
+    images: Array<{ filename: string; url: string; originalName: string }>;
+  }> {
+    if (!files || files.length === 0) {
+      throw new Error('No files uploaded');
+    }
+
+    const images = files.map((file) => ({
+      filename: file.filename,
+      originalName: file.originalname,
+      url: `/uploads/cars/${file.filename}`,
+    }));
+
+    return { images };
   }
 }

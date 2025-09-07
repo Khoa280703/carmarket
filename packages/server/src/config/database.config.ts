@@ -6,6 +6,9 @@ import { CarDetail } from '../entities/car-detail.entity';
 import { CarImage } from '../entities/car-image.entity';
 import { ListingDetail } from '../entities/listing-detail.entity';
 import { Transaction } from '../entities/transaction.entity';
+import { CarMake } from '../entities/car-make.entity';
+import { CarModel } from '../entities/car-model.entity';
+import { CarMetadata } from '../entities/car-metadata.entity';
 
 @Injectable()
 export class DatabaseConfig implements TypeOrmOptionsFactory {
@@ -19,7 +22,16 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
       username: this.configService.get<string>('DATABASE_USERNAME'),
       password: this.configService.get<string>('DATABASE_PASSWORD'),
       database: this.configService.get<string>('DATABASE_NAME'),
-      entities: [User, CarDetail, CarImage, ListingDetail, Transaction],
+      entities: [
+        User,
+        CarDetail,
+        CarImage,
+        ListingDetail,
+        Transaction,
+        CarMake,
+        CarModel,
+        CarMetadata,
+      ],
       synchronize: this.configService.get<string>('NODE_ENV') === 'development',
       logging: this.configService.get<string>('NODE_ENV') === 'development',
       migrations: ['dist/migrations/*{.ts,.js}'],
