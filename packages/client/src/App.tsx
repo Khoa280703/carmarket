@@ -6,7 +6,10 @@ import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { CarDetailsPage } from "./pages/CarDetailsPage";
 import { SellCarPage } from "./pages/SellCarPage";
+import { EditListingPage } from "./pages/EditListingPage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { FavoritesPage } from "./pages/FavoritesPage";
+import { ChatPage } from "./pages/ChatPage";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
@@ -32,10 +35,34 @@ function App() {
               }
             />
             <Route
+              path="/edit-listing/:id"
+              element={
+                <ProtectedRoute>
+                  <EditListingPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/profile"
               element={
                 <ProtectedRoute>
                   <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/favorites"
+              element={
+                <ProtectedRoute>
+                  <FavoritesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/chat/:conversationId"
+              element={
+                <ProtectedRoute>
+                  <ChatPage />
                 </ProtectedRoute>
               }
             />

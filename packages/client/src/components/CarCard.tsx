@@ -1,8 +1,21 @@
 import { Link } from "react-router-dom";
-import { Car, MapPin, Calendar, Fuel, Eye, Heart } from "lucide-react";
+import { useState, useEffect } from "react";
+import {
+  Car,
+  MapPin,
+  Calendar,
+  Fuel,
+  Eye,
+  Heart,
+  MessageCircle,
+} from "lucide-react";
 import { Card, CardContent } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { formatPrice, formatNumber, formatRelativeTime } from "../lib/utils";
+import { FavoritesService } from "../services/favorites.service";
+import { ChatService } from "../services/chat.service";
+import { useAuthStore } from "../store/auth";
+import toast from "react-hot-toast";
 import type { ListingDetail } from "../types";
 
 interface CarCardProps {
@@ -10,6 +23,7 @@ interface CarCardProps {
   showActions?: boolean;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onFavoriteChange?: (listingId: string, isFavorite: boolean) => void;
 }
 
 export function CarCard({
@@ -17,10 +31,105 @@ export function CarCard({
   showActions = false,
   onEdit,
   onDelete,
+  onFavoriteChange,
 }: CarCardProps) {
+  const { user, isAuthenticated } = useAuthStore();
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
   const primaryImage =
     listing.carDetail.images.find((img) => img.isPrimary) ||
     listing.carDetail.images[0];
+
+  // Check if listing is favorited
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      FavoritesService.checkIfFavorite(listing.id)
+        .then((result) => {
+          console.log(`Favorite check for listing ${listing.id}:`, result);
+          setIsFavorite(result);
+        })
+        .catch((error) => {
+          console.error(
+            `Error checking favorite for listing ${listing.id}:`,
+            error
+          );
+          setIsFavorite(false);
+        });
+    }
+  }, [listing.id, isAuthenticated, user]);
+
+  const handleToggleFavorite = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!isAuthenticated) {
+      toast.error("Please log in to add favorites");
+      return;
+    }
+
+    setIsLoading(true);
+    const previousState = isFavorite;
+
+    console.log(
+      `Toggling favorite for listing ${listing.id}, current state: ${isFavorite}`
+    );
+
+    try {
+      if (isFavorite) {
+        console.log("Removing from favorites...");
+        await FavoritesService.removeFromFavorites(listing.id);
+        setIsFavorite(false);
+        console.log("Removed from favorites, new state: false");
+        toast.success("Removed from favorites");
+        onFavoriteChange?.(listing.id, false);
+      } else {
+        console.log("Adding to favorites...");
+        await FavoritesService.addToFavorites(listing.id);
+        setIsFavorite(true);
+        console.log("Added to favorites, new state: true");
+        toast.success("Added to favorites");
+        onFavoriteChange?.(listing.id, true);
+      }
+    } catch (error: any) {
+      // Revert state on error
+      setIsFavorite(previousState);
+      const errorMessage =
+        error.response?.data?.message || "Failed to update favorites";
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSendMessage = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!isAuthenticated) {
+      toast.error("Please log in to send messages");
+      return;
+    }
+
+    if (user?.id === listing.seller.id) {
+      toast.error("You cannot message yourself");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const conversation = await ChatService.startConversation(listing.id);
+      toast.success("Conversation started! Check your messages.");
+      // Navigate to chat page or open chat modal
+      window.location.href = `/chat/${conversation.conversation.id}`;
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message || "Failed to start conversation";
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Card className="hover:shadow-lg transition-shadow duration-200 overflow-hidden">
@@ -125,6 +234,33 @@ export function CarCard({
             </div>
           </div>
         </Link>
+
+        {/* Action Buttons for All Users */}
+        {!showActions && isAuthenticated && user?.id !== listing.seller.id && (
+          <div className="flex space-x-2 mt-4 pt-4 border-t border-gray-200">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleToggleFavorite}
+              disabled={isLoading}
+              className={`flex-1 ${isFavorite ? "text-red-500 border-red-500" : ""}`}
+            >
+              <Heart
+                className={`w-4 h-4 mr-1 ${isFavorite ? "fill-current" : ""}`}
+              />
+              {isFavorite ? "Saved" : "Save"}
+            </Button>
+            <Button
+              size="sm"
+              className="flex-1 bg-blue-600 text-white hover:bg-blue-700"
+              onClick={handleSendMessage}
+              disabled={isLoading}
+            >
+              <MessageCircle className="w-4 h-4 mr-1" />
+              Message
+            </Button>
+          </div>
+        )}
 
         {/* Action Buttons for User's Own Listings */}
         {showActions && (

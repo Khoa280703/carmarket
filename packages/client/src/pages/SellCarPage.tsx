@@ -87,17 +87,23 @@ export function SellCarPage() {
     const files = Array.from(event.target.files || []);
 
     if (uploadedImages.length + files.length > 10) {
-      toast.error("Maximum 10 images allowed");
+      toast.error(
+        "📸 You can upload maximum 10 images per listing. Please remove some images first."
+      );
       return;
     }
 
     const validFiles = files.filter((file) => {
       if (file.size > 5 * 1024 * 1024) {
-        toast.error(`${file.name} is too large. Maximum 5MB per image.`);
+        toast.error(
+          `Image "${file.name}" is too large. Please choose an image smaller than 5MB.`
+        );
         return false;
       }
       if (!file.type.match(/^image\/(jpeg|jpg|png|gif)$/)) {
-        toast.error(`${file.name} is not a valid image format.`);
+        toast.error(
+          `"${file.name}" is not a supported image format. Please use JPEG, PNG, or GIF.`
+        );
         return false;
       }
       return true;
@@ -127,6 +133,8 @@ export function SellCarPage() {
         filename: string;
         url: string;
         originalName: string;
+        fileSize: number;
+        mimeType: string;
       }> = [];
       if (uploadedImages.length > 0) {
         const uploadResponse =
@@ -170,17 +178,22 @@ export function SellCarPage() {
           url: img.url,
           type: index === 0 ? "exterior" : "other",
           alt: `${data.make} ${data.model} image ${index + 1}`,
+          fileSize: img.fileSize,
+          mimeType: img.mimeType,
         })),
       };
 
       const newListing = await ListingService.createListing(listingData);
 
       toast.success(
-        "Listing created successfully! It will be reviewed by our team."
+        "🎉 Your car listing has been created successfully! Our team will review it within 24 hours."
       );
       navigate(`/cars/${newListing.id}`);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to create listing");
+      const errorMessage =
+        error.response?.data?.message ||
+        "We couldn't create your listing right now. Please try again.";
+      toast.error(errorMessage);
     } finally {
       setIsUploading(false);
     }
@@ -599,12 +612,20 @@ export function SellCarPage() {
                 >
                   Color
                 </label>
-                <Input
+                <select
                   id="color"
                   {...register("color")}
-                  placeholder="White"
-                  className={errors.color ? "border-red-500" : ""}
-                />
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    errors.color ? "border-red-500" : "border-gray-300"
+                  }`}
+                >
+                  <option value="">Select color</option>
+                  {metadata.colors.map((color) => (
+                    <option key={color.id} value={color.value}>
+                      {color.displayValue}
+                    </option>
+                  ))}
+                </select>
                 {errors.color && (
                   <p className="mt-1 text-sm text-red-600">
                     {errors.color.message}

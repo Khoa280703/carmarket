@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Car, User, LogOut, Plus, Shield } from "lucide-react";
+import { Car, User, LogOut, Plus, Shield, Heart } from "lucide-react";
 import { useAuthStore } from "../store/auth";
 import { Button } from "./ui/Button";
 import { Avatar } from "./ui/Avatar";
@@ -74,6 +74,14 @@ export function Header() {
                     >
                       <User className="h-4 w-4 mr-3" />
                       Profile
+                    </Link>
+
+                    <Link
+                      to="/favorites"
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      <Heart className="h-4 w-4 mr-3" />
+                      Favorites
                     </Link>
 
                     {user?.role === "admin" && (

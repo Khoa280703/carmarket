@@ -42,10 +42,13 @@ export function LoginPage() {
   const onSubmit = async (data: LoginForm) => {
     try {
       await login(data);
-      toast.success("Welcome back!");
+      toast.success("🎉 Welcome back! You're now logged in.");
       navigate(from, { replace: true });
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Login failed");
+      const errorMessage =
+        error.response?.data?.message ||
+        "Login failed. Please check your email and password.";
+      toast.error(errorMessage);
     }
   };
 

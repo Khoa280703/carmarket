@@ -101,10 +101,13 @@ export function ProfilePage() {
       const response = await ProfileService.updateProfile(data);
       setUser(response);
       updateUser(response);
-      toast.success("Profile updated successfully!");
+      toast.success("✅ Your profile has been updated successfully!");
       setIsEditing(false);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to update profile");
+      const errorMessage =
+        error.response?.data?.message ||
+        "We couldn't update your profile. Please try again.";
+      toast.error(errorMessage);
     }
   };
 
@@ -115,12 +118,14 @@ export function ProfilePage() {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("File size must be less than 5MB");
+      toast.error(
+        "📸 Image is too large. Please choose a photo smaller than 5MB."
+      );
       return;
     }
 
     if (!file.type.match(/^image\/(jpeg|jpg|png|gif)$/)) {
-      toast.error("Please upload a valid image file (JPEG, PNG, GIF)");
+      toast.error("📸 Please upload a valid image file (JPEG, PNG, or GIF).");
       return;
     }
 
@@ -131,9 +136,12 @@ export function ProfilePage() {
       const updatedUser = { ...user!, profileImage: response.profileImage };
       setUser(updatedUser);
       updateUser(updatedUser);
-      toast.success("Avatar updated successfully!");
+      toast.success("📸 Your profile picture has been updated!");
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to upload avatar");
+      const errorMessage =
+        error.response?.data?.message ||
+        "We couldn't upload your photo. Please try again.";
+      toast.error(errorMessage);
     } finally {
       setIsUploading(false);
     }
@@ -154,8 +162,7 @@ export function ProfilePage() {
   };
 
   const handleEditListing = (id: string) => {
-    // Navigate to edit listing page (to be implemented)
-    console.log("Edit listing:", id);
+    window.location.href = `/edit-listing/${id}`;
   };
 
   const handleDeleteListing = async (id: string) => {
@@ -165,10 +172,13 @@ export function ProfilePage() {
 
     try {
       await ListingService.deleteListing(id);
-      toast.success("Listing deleted successfully!");
+      toast.success("🗑️ Your listing has been deleted successfully!");
       fetchUserListings(); // Refresh listings
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to delete listing");
+      const errorMessage =
+        error.response?.data?.message ||
+        "We couldn't delete your listing. Please try again.";
+      toast.error(errorMessage);
     }
   };
 
@@ -514,7 +524,7 @@ export function ProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {userListings.map((listing) => (
                   <CarCard
-                    key={listing.id}
+                    key={`${listing.id}-${user?.id || "anonymous"}`}
                     listing={listing}
                     showActions={true}
                     onEdit={handleEditListing}

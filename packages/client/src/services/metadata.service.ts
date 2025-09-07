@@ -42,6 +42,7 @@ export interface AllMetadata {
   priceTypes: CarMetadata[];
   carFeatures: CarMetadata[];
   colors: CarMetadata[];
+  makes: CarMake[];
 }
 
 export class MetadataService {

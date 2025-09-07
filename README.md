@@ -72,10 +72,12 @@ npm run db:down  # Stop database
 - 🔐 **Authentication**: Register, login, password reset with JWT
 - 👤 **User Profiles**: Complete profile management with avatar upload
 - 🚗 **Car Listings**: Create, edit, delete listings with image support
-- 🔍 **Advanced Search**: Filter by make, model, price, year, location
-- 🛡️ **Admin Panel**: User management and listing approval workflow
+- 🔍 **Advanced Search**: Filter by make, model, price, fuel type, body type
+- ❤️ **Favorites System**: Save and manage favorite listings
+- 🛡️ **Admin Panel**: Metadata management and listing approval workflow
+- 📊 **Dynamic Data**: All car data managed through database (no hardcoded values)
 - 📱 **Responsive Design**: Modern UI with Tailwind CSS v4
-- 🔄 **Real-time Updates**: Live notifications and data updates
+- 🔄 **Real-time Updates**: User-friendly notifications and data updates
 
 ## Project Structure
 
@@ -112,6 +114,21 @@ carmarket/
 - `DELETE /api/listings/:id` - Delete listing
 - `POST /api/listings/upload-images` - Upload car images
 - `GET /api/search` - Search with filters
+
+**Favorites:**
+
+- `POST /api/favorites/:listingId` - Add listing to favorites
+- `DELETE /api/favorites/:listingId` - Remove from favorites
+- `GET /api/favorites` - Get user's favorite listings
+- `GET /api/favorites/check/:listingId` - Check if listing is favorited
+
+**Chat System:**
+
+- `POST /api/chat/start/:listingId` - Start conversation about listing
+- `POST /api/chat/:conversationId/messages` - Send message
+- `GET /api/chat/:conversationId` - Get conversation with messages
+- `GET /api/chat` - Get user's conversations
+- `POST /api/chat/:conversationId/read` - Mark messages as read
 
 **Car Metadata:**
 

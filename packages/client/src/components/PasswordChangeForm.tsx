@@ -49,10 +49,13 @@ export function PasswordChangeForm() {
         newPassword: data.newPassword,
       });
 
-      toast.success("Password changed successfully!");
+      toast.success("🔒 Your password has been changed successfully!");
       reset();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to change password");
+      const errorMessage =
+        error.response?.data?.message ||
+        "We couldn't change your password. Please check your current password and try again.";
+      toast.error(errorMessage);
     }
   };
 

@@ -10,6 +10,8 @@ import {
   CheckCircle,
   XCircle,
   BarChart3,
+  Eye,
+  X,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -25,9 +27,9 @@ import type { CarMetadata } from "../services/metadata.service";
 import toast from "react-hot-toast";
 
 export function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<"overview" | "makes" | "metadata">(
-    "overview"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "makes" | "metadata" | "listings"
+  >("overview");
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [adminMetadata, setAdminMetadata] = useState<AdminMetadata | null>(
     null
@@ -38,11 +40,66 @@ export function AdminDashboard() {
     type?: string;
     visible: boolean;
   }>({ visible: false });
+  const [pendingListings, setPendingListings] = useState<any[]>([]);
+  const [listingsLoading, setListingsLoading] = useState(false);
+  const [selectedListing, setSelectedListing] = useState<any>(null);
+  const [rejectionReason, setRejectionReason] = useState<string | undefined>(
+    undefined
+  );
 
   useEffect(() => {
     fetchDashboardStats();
     fetchAdminMetadata();
-  }, []);
+    if (activeTab === "listings") {
+      fetchPendingListings();
+    }
+  }, [activeTab]);
+
+  const fetchPendingListings = async () => {
+    try {
+      setListingsLoading(true);
+      const response = (await AdminService.getPendingListings()) as {
+        listings: any[];
+      };
+      setPendingListings(response.listings || []);
+    } catch (error) {
+      toast.error("Failed to load pending listings");
+    } finally {
+      setListingsLoading(false);
+    }
+  };
+
+  const handleApproveListing = async (id: string) => {
+    try {
+      await AdminService.approveListing(id);
+      toast.success(
+        "✅ Listing has been approved and is now visible to users!"
+      );
+      fetchPendingListings();
+      fetchDashboardStats();
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        "We couldn't approve this listing. Please try again.";
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleRejectListing = async (id: string, reason?: string) => {
+    try {
+      await AdminService.rejectListing(id, reason);
+      toast.success(
+        "❌ Listing has been rejected and seller has been notified."
+      );
+      fetchPendingListings();
+      fetchDashboardStats();
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        "We couldn't reject this listing. Please try again.";
+      toast.error(errorMessage);
+    }
+  };
 
   const fetchDashboardStats = async () => {
     try {
@@ -68,10 +125,15 @@ export function AdminDashboard() {
   const handleSeedData = async () => {
     try {
       await AdminService.seedInitialData();
-      toast.success("Initial data seeded successfully!");
+      toast.success(
+        "🌱 Initial car data has been seeded successfully! You can now manage car makes, fuel types, and features."
+      );
       fetchAdminMetadata();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to seed data");
+      const errorMessage =
+        error.response?.data?.message ||
+        "We couldn't seed the initial data. Please try again.";
+      toast.error(errorMessage);
     }
   };
 
@@ -81,11 +143,16 @@ export function AdminDashboard() {
   }) => {
     try {
       await AdminService.createMake(data);
-      toast.success("Car make created successfully!");
+      toast.success(
+        `🚗 Car make "${data.displayName}" has been added successfully!`
+      );
       fetchAdminMetadata();
       setNewItemForm({ visible: false });
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to create car make");
+      const errorMessage =
+        error.response?.data?.message ||
+        "We couldn't create the car make. Please try again.";
+      toast.error(errorMessage);
     }
   };
 
@@ -250,6 +317,7 @@ export function AdminDashboard() {
         <nav className="-mb-px flex space-x-8">
           {[
             { id: "overview", label: "Overview", icon: BarChart3 },
+            { id: "listings", label: "Pending Listings", icon: CheckCircle },
             { id: "makes", label: "Car Makes", icon: Car },
             { id: "metadata", label: "Metadata", icon: Database },
           ].map((tab) => (
@@ -299,6 +367,114 @@ export function AdminDashboard() {
               </div>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* Pending Listings Management */}
+      {activeTab === "listings" && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold text-gray-900">
+              Pending Listings ({pendingListings.length})
+            </h2>
+            <Button onClick={fetchPendingListings} variant="outline">
+              Refresh
+            </Button>
+          </div>
+
+          {listingsLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[...Array(4)].map((_, i) => (
+                <Card key={i} className="animate-pulse">
+                  <div className="h-48 bg-gray-200"></div>
+                  <CardContent className="p-4">
+                    <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-6 bg-gray-200 rounded mb-4"></div>
+                    <div className="flex space-x-2">
+                      <div className="h-8 bg-gray-200 rounded flex-1"></div>
+                      <div className="h-8 bg-gray-200 rounded flex-1"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : pendingListings.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {pendingListings.map((listing) => (
+                <Card key={listing.id}>
+                  <div className="relative h-48 bg-gray-200 overflow-hidden">
+                    {listing.carDetail?.images?.[0] ? (
+                      <img
+                        src={`http://localhost:3000${listing.carDetail.images[0].url}`}
+                        alt={listing.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <Car className="h-12 w-12 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+                  <CardContent className="p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      {listing.title}
+                    </h3>
+                    <p className="text-2xl font-bold text-blue-600 mb-2">
+                      ${listing.price?.toLocaleString()}
+                    </p>
+                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                      {listing.description}
+                    </p>
+                    <div className="text-xs text-gray-500 mb-4">
+                      By: {listing.seller?.firstName} {listing.seller?.lastName}
+                      <br />
+                      Location: {listing.location}
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => setSelectedListing(listing)}
+                      >
+                        <Eye className="w-4 h-4 mr-1" />
+                        View Details
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-green-600 text-white hover:bg-green-700"
+                        onClick={() => handleApproveListing(listing.id)}
+                      >
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          setSelectedListing(listing);
+                          setRejectionReason("");
+                        }}
+                      >
+                        <XCircle className="w-4 h-4 mr-1" />
+                        Reject
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <CheckCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No pending listings
+              </h3>
+              <p className="text-gray-500">
+                All listings have been reviewed. Great job!
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -643,6 +819,179 @@ export function AdminDashboard() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Listing Details Modal */}
+      {selectedListing && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-screen overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-semibold text-gray-900">
+                  Review Listing
+                </h3>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedListing(null);
+                    setRejectionReason("");
+                  }}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Images */}
+                <div>
+                  {selectedListing.carDetail?.images?.[0] ? (
+                    <img
+                      src={`http://localhost:3000${selectedListing.carDetail.images[0].url}`}
+                      alt={selectedListing.title}
+                      className="w-full h-64 object-cover rounded-lg"
+                    />
+                  ) : (
+                    <div className="w-full h-64 bg-gray-200 flex items-center justify-center rounded-lg">
+                      <Car className="h-16 w-16 text-gray-400" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Details */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900">
+                      {selectedListing.title}
+                    </h4>
+                    <p className="text-2xl font-bold text-blue-600">
+                      ${selectedListing.price?.toLocaleString()}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Make:</span>
+                      <span className="ml-2 font-medium">
+                        {selectedListing.carDetail?.make}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Model:</span>
+                      <span className="ml-2 font-medium">
+                        {selectedListing.carDetail?.model}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Year:</span>
+                      <span className="ml-2 font-medium">
+                        {selectedListing.carDetail?.year}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Mileage:</span>
+                      <span className="ml-2 font-medium">
+                        {selectedListing.carDetail?.mileage?.toLocaleString()}{" "}
+                        miles
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="text-gray-600">Description:</span>
+                    <p className="mt-1 text-gray-900">
+                      {selectedListing.description}
+                    </p>
+                  </div>
+
+                  <div>
+                    <span className="text-gray-600">Seller:</span>
+                    <p className="mt-1 font-medium">
+                      {selectedListing.seller?.firstName}{" "}
+                      {selectedListing.seller?.lastName}
+                      <br />
+                      <span className="text-sm text-gray-500">
+                        {selectedListing.seller?.email}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rejection Form */}
+              {rejectionReason !== undefined && (
+                <div className="mt-6 p-4 bg-red-50 rounded-lg">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Rejection Reason (will be sent to seller)
+                  </label>
+                  <textarea
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    placeholder="Please provide specific feedback for the seller to improve their listing..."
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                  />
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex justify-end space-x-3 mt-6">
+                {rejectionReason !== undefined ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => setRejectionReason("")}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        handleRejectListing(
+                          selectedListing.id,
+                          rejectionReason
+                        );
+                        setSelectedListing(null);
+                        setRejectionReason("");
+                      }}
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Reject with Feedback
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedListing(null);
+                        setRejectionReason("");
+                      }}
+                    >
+                      Close
+                    </Button>
+                    <Button
+                      className="bg-green-600 text-white hover:bg-green-700"
+                      onClick={() => {
+                        handleApproveListing(selectedListing.id);
+                        setSelectedListing(null);
+                      }}
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Approve Listing
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => setRejectionReason("")}
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Reject
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
