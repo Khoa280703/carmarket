@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  UseGuards,
+  Query,
+} from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -32,14 +40,32 @@ export class ChatController {
     );
   }
 
-  @Get(':conversationId')
-  getConversation(@Param('conversationId') conversationId: string) {
-    return this.chatService.getConversationWithMessages(conversationId);
+  @Get('unread-count')
+  getUnreadCount(@CurrentUser() user: User) {
+    return this.chatService.getUnreadMessageCount(user.id);
   }
 
   @Get()
   getUserConversations(@CurrentUser() user: User) {
     return this.chatService.getUserConversations(user.id);
+  }
+
+  @Get(':conversationId')
+  getConversation(@Param('conversationId') conversationId: string) {
+    return this.chatService.getConversationWithMessages(conversationId);
+  }
+
+  @Get(':conversationId/messages')
+  getMessages(
+    @Param('conversationId') conversationId: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
+  ) {
+    return this.chatService.getMessages(
+      conversationId,
+      parseInt(page),
+      parseInt(limit),
+    );
   }
 
   @Post(':conversationId/read')
