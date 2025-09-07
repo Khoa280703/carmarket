@@ -1,11 +1,21 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Car, User, LogOut, Plus, Shield, Heart } from "lucide-react";
+import {
+  Car,
+  User,
+  LogOut,
+  Plus,
+  Shield,
+  Heart,
+  MessageCircle,
+} from "lucide-react";
 import { useAuthStore } from "../store/auth";
+import { useNotifications } from "../contexts/NotificationContext";
 import { Button } from "./ui/Button";
 import { Avatar } from "./ui/Avatar";
 
 export function Header() {
   const { user, isAuthenticated, logout } = useAuthStore();
+  const { unreadCount } = useNotifications();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -82,6 +92,19 @@ export function Header() {
                     >
                       <Heart className="h-4 w-4 mr-3" />
                       Favorites
+                    </Link>
+
+                    <Link
+                      to="/conversations"
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      <MessageCircle className="h-4 w-4 mr-3" />
+                      Messages
+                      {unreadCount > 0 && (
+                        <span className="ml-2 bg-red-500 text-white text-xs rounded-full px-2 py-1">
+                          {unreadCount}
+                        </span>
+                      )}
                     </Link>
 
                     {user?.role === "admin" && (

@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Not, In } from 'typeorm';
 import { ChatConversation } from '../../entities/chat-conversation.entity';
 import { ChatMessage, MessageType } from '../../entities/chat-message.entity';
 import { ListingDetail } from '../../entities/listing-detail.entity';
@@ -104,7 +104,11 @@ export class ChatService {
       lastMessageAt: new Date(),
     });
 
-    return savedMessage;
+    // Return message with sender relation loaded
+    return this.messageRepository.findOne({
+      where: { id: savedMessage.id },
+      relations: ['sender'],
+    });
   }
 
   async getConversationWithMessages(conversationId: string) {
@@ -173,5 +177,99 @@ export class ChatService {
     );
 
     return { message: 'Messages marked as read' };
+  }
+
+  async updateTypingStatus(
+    conversationId: string,
+    userId: string,
+    isTyping: boolean,
+  ) {
+    const conversation = await this.conversationRepository.findOne({
+      where: { id: conversationId },
+    });
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    if (conversation.buyerId === userId) {
+      conversation.isBuyerTyping = isTyping;
+    } else if (conversation.sellerId === userId) {
+      conversation.isSellerTyping = isTyping;
+    }
+
+    await this.conversationRepository.save(conversation);
+  }
+
+  async getConversationById(conversationId: string) {
+    const conversation = await this.conversationRepository.findOne({
+      where: { id: conversationId },
+      relations: ['buyer', 'seller', 'listing'],
+    });
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    return { conversation };
+  }
+
+  async getUnreadMessageCount(userId: string) {
+    try {
+      const conversations = await this.conversationRepository.find({
+        where: [{ buyerId: userId }, { sellerId: userId }],
+      });
+
+      if (conversations.length === 0) {
+        return { unreadCount: 0 };
+      }
+
+      const conversationIds = conversations.map((conv) => conv.id);
+
+      const totalUnread = await this.messageRepository.count({
+        where: {
+          conversationId: In(conversationIds),
+          senderId: Not(userId),
+          isRead: false,
+        },
+      });
+
+      return { unreadCount: totalUnread };
+    } catch (error) {
+      return { unreadCount: 0 };
+    }
+  }
+
+  async getMessages(
+    conversationId: string,
+    page: number = 1,
+    limit: number = 20,
+  ) {
+    const conversation = await this.conversationRepository.findOne({
+      where: { id: conversationId },
+    });
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    const [messages, total] = await this.messageRepository.findAndCount({
+      where: { conversationId },
+      relations: ['sender'],
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return {
+      messages: messages.reverse(), // Reverse to show oldest first
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore: page < Math.ceil(total / limit),
+      },
+    };
   }
 }

@@ -46,7 +46,6 @@ export function CarCard({
     if (isAuthenticated && user) {
       FavoritesService.checkIfFavorite(listing.id)
         .then((result) => {
-          console.log(`Favorite check for listing ${listing.id}:`, result);
           setIsFavorite(result);
         })
         .catch((error) => {
@@ -71,23 +70,15 @@ export function CarCard({
     setIsLoading(true);
     const previousState = isFavorite;
 
-    console.log(
-      `Toggling favorite for listing ${listing.id}, current state: ${isFavorite}`
-    );
-
     try {
       if (isFavorite) {
-        console.log("Removing from favorites...");
         await FavoritesService.removeFromFavorites(listing.id);
         setIsFavorite(false);
-        console.log("Removed from favorites, new state: false");
         toast.success("Removed from favorites");
         onFavoriteChange?.(listing.id, false);
       } else {
-        console.log("Adding to favorites...");
         await FavoritesService.addToFavorites(listing.id);
         setIsFavorite(true);
-        console.log("Added to favorites, new state: true");
         toast.success("Added to favorites");
         onFavoriteChange?.(listing.id, true);
       }
@@ -118,11 +109,17 @@ export function CarCard({
 
     setIsLoading(true);
     try {
-      const conversation = await ChatService.startConversation(listing.id);
+      const response = await ChatService.startConversation(listing.id);
+
       toast.success("Conversation started! Check your messages.");
       // Navigate to chat page or open chat modal
-      window.location.href = `/chat/${conversation.conversation.id}`;
+      window.location.href = `/chat/${response.conversation.id}`;
     } catch (error: any) {
+      console.error("Failed to start conversation:", error);
+      console.error("Error response:", error.response);
+      console.error("Error status:", error.response?.status);
+      console.error("Error data:", error.response?.data);
+
       const errorMessage =
         error.response?.data?.message || "Failed to start conversation";
       toast.error(errorMessage);
