@@ -37,18 +37,28 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   async handleConnection(client: AuthenticatedSocket) {
     try {
+      console.log('Socket connection attempt:', client.id);
+
       const token =
         (client.handshake.query.token as string) ||
         client.handshake.headers.authorization?.replace('Bearer ', '');
 
+      console.log('Token found:', !!token);
+
       if (!token) {
+        console.log('No token provided, disconnecting');
         client.disconnect();
         return;
       }
 
       const userId = await this.verifyToken(token);
+      console.log(
+        'Token verification result:',
+        userId ? `User: ${userId}` : 'Failed',
+      );
 
       if (!userId) {
+        console.log('Token verification failed, disconnecting');
         client.disconnect();
         return;
       }
@@ -65,7 +75,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       for (const conversation of conversations) {
         void client.join(`conversation:${conversation.id}`);
       }
-    } catch {
+
+      console.log(`User ${userId} connected with socket ${client.id}`);
+    } catch (error) {
+      console.log('Connection error:', error);
       client.disconnect();
     }
   }
@@ -88,7 +101,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { conversationId: string; content: string },
     @ConnectedSocket() client: AuthenticatedSocket,
   ) {
+    console.log('messageeeeeeee - Backend received sendMessage event:', {
+      userId: client.userId,
+      conversationId: data.conversationId,
+      content: data.content,
+      socketId: client.id,
+    });
+
     if (!client.userId) {
+      console.log('No userId found on socket, returning');
       return;
     }
 
@@ -98,7 +119,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.userId,
         data.content,
       );
-
+      console.log('messageeeeeeee', message);
       this.server.to(`conversation:${data.conversationId}`).emit('newMessage', {
         conversationId: data.conversationId,
         message,
@@ -189,6 +210,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!client.userId) return;
 
     void client.join(`conversation:${conversationId}`);
+  }
+
+  @SubscribeMessage('test')
+  handleTest(
+    @MessageBody() data: any,
+    @ConnectedSocket() client: AuthenticatedSocket,
+  ) {
+    console.log('TEST EVENT RECEIVED:', data, 'from user:', client.userId);
+    client.emit('testResponse', `Echo: ${data}`);
   }
 
   private async verifyToken(token: string): Promise<string | null> {

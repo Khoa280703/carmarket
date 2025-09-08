@@ -72,19 +72,23 @@ class SocketService {
     if (!this.socket) return;
 
     this.socket.on("connect", () => {
-      // Socket connected
+      console.log("Socket.IO connected - emitting connectionStatusChanged");
+      // Emit custom event for connection status change
+      this.emit("connectionStatusChanged", { connected: true });
     });
 
     this.socket.on("disconnect", () => {
-      // Socket disconnected
+      console.log("Socket.IO disconnected - emitting connectionStatusChanged");
+      // Emit custom event for connection status change
+      this.emit("connectionStatusChanged", { connected: false });
     });
 
     this.socket.on("error", () => {
-      // Handle socket errors
+      // Socket error
     });
 
     this.socket.on("connect_error", () => {
-      // Handle connection errors
+      // Socket connection error
     });
 
     this.socket.on("newMessage", (data: SocketMessage) => {
@@ -110,6 +114,10 @@ class SocketService {
         this.emit("messagesRead", data);
       }
     );
+
+    this.socket.on("testResponse", () => {
+      // Test response received
+    });
   }
 
   sendMessage(conversationId: string, content: string) {

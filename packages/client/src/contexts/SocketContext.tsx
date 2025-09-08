@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { useAuthStore } from "../store/auth";
 import { socketService } from "../services/socket.service";
 
@@ -12,6 +12,7 @@ const SocketContext = createContext<SocketContextType>({
 
 export function SocketProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, accessToken } = useAuthStore();
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated && accessToken) {
@@ -25,10 +26,29 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     };
   }, [isAuthenticated, accessToken]);
 
+  useEffect(() => {
+    // Listen for connection status changes
+    const updateConnectionStatus = (data: { connected: boolean }) => {
+      console.log("SocketContext received connectionStatusChanged:", data);
+      setIsConnected(data.connected);
+    };
+
+    // Initial check
+    setIsConnected(socketService.isConnected());
+
+    // Listen for custom connection status change events
+    const unsubscribe = socketService.on(
+      "connectionStatusChanged",
+      updateConnectionStatus
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
   return (
-    <SocketContext.Provider
-      value={{ isConnected: socketService.isConnected() }}
-    >
+    <SocketContext.Provider value={{ isConnected }}>
       {children}
     </SocketContext.Provider>
   );
