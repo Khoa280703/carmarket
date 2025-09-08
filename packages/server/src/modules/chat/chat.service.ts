@@ -8,9 +8,12 @@ import { Repository, Not, In } from 'typeorm';
 import { ChatConversation } from '../../entities/chat-conversation.entity';
 import { ChatMessage, MessageType } from '../../entities/chat-message.entity';
 import { ListingDetail } from '../../entities/listing-detail.entity';
+import { Server as SocketIOServer } from 'socket.io';
 
 @Injectable()
 export class ChatService {
+  private io: SocketIOServer | null = null;
+
   constructor(
     @InjectRepository(ChatConversation)
     private readonly conversationRepository: Repository<ChatConversation>,
@@ -19,6 +22,10 @@ export class ChatService {
     @InjectRepository(ListingDetail)
     private readonly listingRepository: Repository<ListingDetail>,
   ) {}
+
+  setSocketIO(io: SocketIOServer) {
+    this.io = io;
+  }
 
   async startConversation(buyerId: string, listingId: string) {
     const listing = await this.listingRepository.findOne({
@@ -104,11 +111,24 @@ export class ChatService {
       lastMessageAt: new Date(),
     });
 
-    // Return message with sender relation loaded
-    return this.messageRepository.findOne({
+    // Get message with sender relation loaded
+    const messageWithSender = await this.messageRepository.findOne({
       where: { id: savedMessage.id },
       relations: ['sender'],
     });
+
+    // Emit Socket.IO event for real-time updates
+    if (this.io) {
+      const chatNamespace = this.io.of('/chat');
+
+      // Emit to all users in the conversation
+      chatNamespace.to(`conversation:${conversationId}`).emit('newMessage', {
+        conversationId,
+        message: messageWithSender,
+      });
+    }
+
+    return messageWithSender;
   }
 
   async getConversationWithMessages(conversationId: string) {

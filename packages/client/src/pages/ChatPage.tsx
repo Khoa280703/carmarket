@@ -109,16 +109,15 @@ export function ChatPage() {
               const newMessages = [...prev, data.message];
               // Auto-scroll to bottom after adding message
               setTimeout(scrollToBottom, 100);
-
-              // Show notification for new message (only if not from current user)
-              if (data.message.sender?.id !== user?.id) {
-                toast.success(
-                  `New message from ${data.message.sender?.firstName} ${data.message.sender?.lastName}`
-                );
-              }
-
               return newMessages;
             });
+
+            // Show notification for new message (only if not from current user)
+            if (data.message.sender?.id !== user?.id) {
+              toast.success(
+                `New message from ${data.message.sender?.firstName} ${data.message.sender?.lastName}`
+              );
+            }
           }
         }
       );
@@ -236,10 +235,8 @@ export function ChatPage() {
         );
       }
 
-      // Also send via Socket.IO for real-time updates (if connected)
-      if (socketService.isConnected()) {
-        socketService.sendMessage(conversationId, messageContent);
-      }
+      // Note: Socket.IO is only used for receiving real-time updates
+      // Message sending is handled by REST API above
 
       // Refresh conversations to update unread count (with error handling)
       try {
