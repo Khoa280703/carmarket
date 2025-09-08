@@ -240,12 +240,12 @@ export function CarCard({
               variant="outline"
               onClick={handleToggleFavorite}
               disabled={isLoading}
-              className={`flex-1 ${isFavorite ? "text-red-500 border-red-500" : ""}`}
+              className={`flex-1 ${isFavorite ? "text-red-500 border-red-500 hover:bg-red-50" : ""}`}
             >
               <Heart
-                className={`w-4 h-4 mr-1 ${isFavorite ? "fill-current" : ""}`}
+                className={`w-4 h-4 mr-1 ${isFavorite ? "fill-current text-red-500" : "text-gray-400"}`}
               />
-              {isFavorite ? "Saved" : "Save"}
+              {isFavorite ? "Remove" : "Save"}
             </Button>
             <Button
               size="sm"

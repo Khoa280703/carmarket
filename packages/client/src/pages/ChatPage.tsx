@@ -29,54 +29,22 @@ export function ChatPage() {
   const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(
     null
   );
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0,
+    hasMore: true,
+  });
   const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMoreMessages, setHasMoreMessages] = useState(true);
-  const [page, setPage] = useState(1);
   const messagesStartRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const isLoadingMoreRef = useRef(false);
 
   const scrollToBottom = () => {
     if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTo({
-        top: messagesContainerRef.current.scrollHeight,
-        behavior: "smooth",
-      });
-    }
-  };
-
-  const loadMoreMessages = async () => {
-    if (loadingMore || !hasMoreMessages || !conversationId) return;
-
-    setLoadingMore(true);
-    try {
-      const nextPage = page + 1;
-      const response = await ChatService.getMessages(
-        conversationId,
-        nextPage,
-        20
-      );
-
-      if (response.messages.length > 0) {
-        // Prepend older messages to the beginning
-        setMessages((prev) => [...response.messages, ...prev]);
-        setPage(nextPage);
-        setHasMoreMessages(response.pagination.hasMore);
-      } else {
-        setHasMoreMessages(false);
-      }
-    } catch (error) {
-      console.error("Failed to load more messages:", error);
-    } finally {
-      setLoadingMore(false);
-    }
-  };
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const { scrollTop } = e.currentTarget;
-
-    // Load more messages when scrolled to top
-    if (scrollTop === 0 && hasMoreMessages && !loadingMore) {
-      loadMoreMessages();
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
     }
   };
 
@@ -143,12 +111,13 @@ export function ChatPage() {
 
     try {
       setLoading(true);
+
+      // Get conversation details (this includes messages, but we'll ignore them)
       const response = await ChatService.getConversation(conversationId);
       setConversation(response.conversation);
-      setMessages(response.messages);
 
-      // Auto-scroll to bottom when messages are loaded
-      setTimeout(scrollToBottom, 100);
+      // Load initial messages with pagination (this will replace the messages from getConversation)
+      await loadMessages(1, true);
 
       // Mark messages as read
       await ChatService.markAsRead(conversationId);
@@ -159,6 +128,71 @@ export function ChatPage() {
       toast.error("Failed to load conversation");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMessages = async (page: number, isInitialLoad: boolean = false) => {
+    if (!conversationId) return;
+
+    try {
+      if (isInitialLoad) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const response = await ChatService.getMessages(
+        conversationId,
+        page,
+        pagination.limit
+      );
+
+      if (isInitialLoad) {
+        setMessages(response.messages);
+        // Auto-scroll to bottom when initial messages are loaded
+        setTimeout(() => {
+          if (messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTop =
+              messagesContainerRef.current.scrollHeight;
+          }
+        }, 100);
+      } else {
+        // Prepend older messages to the beginning
+        setMessages((prev) => [...response.messages, ...prev]);
+      }
+
+      setPagination(response.pagination);
+    } catch (error) {
+      toast.error("Failed to load messages");
+    } finally {
+      if (isInitialLoad) {
+        setLoading(false);
+      } else {
+        setLoadingMore(false);
+      }
+    }
+  };
+
+  const loadMoreMessages = async () => {
+    if (!pagination.hasMore || loadingMore || isLoadingMoreRef.current) return;
+
+    isLoadingMoreRef.current = true;
+    const nextPage = pagination.page + 1;
+    await loadMessages(nextPage, false);
+    isLoadingMoreRef.current = false;
+  };
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop } = e.currentTarget;
+
+    // Load more messages when scrolled to top (within 50px)
+    if (
+      scrollTop < 50 &&
+      pagination.hasMore &&
+      !loadingMore &&
+      !isLoadingMoreRef.current
+    ) {
+      loadMoreMessages();
     }
   };
 
@@ -348,7 +382,7 @@ export function ChatPage() {
               onScroll={handleScroll}
             >
               {/* Load more messages button */}
-              {hasMoreMessages && !loadingMore && (
+              {pagination.hasMore && !loadingMore && (
                 <div className="flex justify-center py-2">
                   <Button
                     variant="outline"

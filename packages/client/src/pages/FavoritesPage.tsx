@@ -48,9 +48,20 @@ export default function FavoritesPage() {
     }
   };
 
-  const handleFavoriteChange = (listingId: string, isFavorite: boolean) => {
+  const handleFavoriteChange = async (
+    listingId: string,
+    isFavorite: boolean
+  ) => {
     if (!isFavorite) {
-      setFavorites((prev) => prev.filter((fav) => fav.id !== listingId));
+      try {
+        await FavoritesService.removeFromFavorites(listingId);
+        setFavorites((prev) => prev.filter((fav) => fav.id !== listingId));
+        toast.success("Removed from favorites");
+      } catch (error: any) {
+        const errorMessage =
+          error.response?.data?.message || "Failed to remove from favorites";
+        toast.error(errorMessage);
+      }
     }
   };
 
@@ -117,11 +128,19 @@ export default function FavoritesPage() {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {favorites.map((listing) => (
-                <CarCard
-                  key={listing.id}
-                  listing={listing}
-                  onFavoriteChange={handleFavoriteChange}
-                />
+                <div key={listing.id} className="relative">
+                  <CarCard
+                    listing={listing}
+                    onFavoriteChange={handleFavoriteChange}
+                  />
+                  <button
+                    onClick={() => handleFavoriteChange(listing.id, false)}
+                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-colors"
+                    title="Remove from favorites"
+                  >
+                    <Heart className="w-4 h-4 fill-current" />
+                  </button>
+                </div>
               ))}
             </div>
 

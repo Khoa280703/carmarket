@@ -108,11 +108,14 @@ export class FavoritesService {
     };
   }
 
-  async checkIfFavorite(userId: string, listingId: string): Promise<boolean> {
+  async checkIfFavorite(
+    userId: string,
+    listingId: string,
+  ): Promise<{ isFavorite: boolean }> {
     const favorite = await this.favoriteRepository.findOne({
       where: { userId, listingId },
     });
 
-    return !!favorite;
+    return { isFavorite: !!favorite };
   }
 }
