@@ -11,7 +11,7 @@ import { ProfilePage } from "./pages/ProfilePage";
 import FavoritesPage from "./pages/FavoritesPage";
 import { ChatPage } from "./pages/ChatPage";
 import { ConversationsListPage } from "./pages/ConversationsListPage";
-import { AdminDashboard } from "./pages/AdminDashboard";
+import { EnhancedAdminDashboard } from "./pages/EnhancedAdminDashboard";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 import { NotificationProvider } from "./contexts/NotificationContext";
@@ -85,7 +85,7 @@ function App() {
                   path="/admin/dashboard"
                   element={
                     <AdminRoute>
-                      <AdminDashboard />
+                      <EnhancedAdminDashboard />
                     </AdminRoute>
                   }
                 />

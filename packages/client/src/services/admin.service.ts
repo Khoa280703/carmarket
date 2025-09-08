@@ -6,6 +6,9 @@ export interface DashboardStats {
   totalListings: number;
   pendingListings: number;
   totalTransactions: number;
+  recentUsers?: number;
+  recentListings?: number;
+  activeListings?: number;
 }
 
 export interface AdminMetadata {
@@ -134,5 +137,120 @@ export class AdminService {
     return apiClient.put<{ message: string }>(`/admin/listings/${id}/reject`, {
       reason,
     });
+  }
+
+  // Enhanced listing management
+  static async getAllListings(
+    page: number = 1,
+    limit: number = 10,
+    status?: string,
+    search?: string
+  ): Promise<{
+    listings: any[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+
+    if (status) params.append("status", status);
+    if (search) params.append("search", search);
+
+    return apiClient.get(`/admin/listings?${params.toString()}`);
+  }
+
+  static async getListingById(id: string): Promise<any> {
+    return apiClient.get(`/admin/listings/${id}`);
+  }
+
+  static async updateListingStatus(
+    id: string,
+    status: string,
+    reason?: string
+  ): Promise<{ message: string }> {
+    return apiClient.put(`/admin/listings/${id}/status`, {
+      status,
+      reason,
+    });
+  }
+
+  static async deleteListing(
+    id: string,
+    reason?: string
+  ): Promise<{ message: string }> {
+    return apiClient.delete(`/admin/listings/${id}`, {
+      data: { reason },
+    });
+  }
+
+  static async toggleFeatured(id: string): Promise<{ message: string }> {
+    return apiClient.put(`/admin/listings/${id}/featured`);
+  }
+
+  // Enhanced user management
+  static async getUserById(id: string): Promise<any> {
+    return apiClient.get(`/admin/users/${id}`);
+  }
+
+  static async updateUserStatus(
+    id: string,
+    isActive: boolean,
+    reason?: string
+  ): Promise<{ message: string }> {
+    return apiClient.put(`/admin/users/${id}/status`, {
+      isActive,
+      reason,
+    });
+  }
+
+  static async updateUserRole(
+    id: string,
+    role: string
+  ): Promise<{ message: string }> {
+    return apiClient.put(`/admin/users/${id}/role`, {
+      role,
+    });
+  }
+
+  static async getUserListings(
+    userId: string,
+    page: number = 1,
+    limit: number = 10
+  ): Promise<{
+    listings: any[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+
+    return apiClient.get(
+      `/admin/users/${userId}/listings?${params.toString()}`
+    );
+  }
+
+  // Analytics and reports
+  static async getAnalyticsOverview(): Promise<any> {
+    return apiClient.get("/admin/analytics/overview");
+  }
+
+  static async getListingAnalytics(period: string = "30d"): Promise<any> {
+    return apiClient.get(`/admin/analytics/listings?period=${period}`);
+  }
+
+  static async getUserAnalytics(period: string = "30d"): Promise<any> {
+    return apiClient.get(`/admin/analytics/users?period=${period}`);
   }
 }

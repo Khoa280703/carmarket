@@ -72,13 +72,11 @@ class SocketService {
     if (!this.socket) return;
 
     this.socket.on("connect", () => {
-      console.log("Socket.IO connected - emitting connectionStatusChanged");
       // Emit custom event for connection status change
       this.emit("connectionStatusChanged", { connected: true });
     });
 
     this.socket.on("disconnect", () => {
-      console.log("Socket.IO disconnected - emitting connectionStatusChanged");
       // Emit custom event for connection status change
       this.emit("connectionStatusChanged", { connected: false });
     });

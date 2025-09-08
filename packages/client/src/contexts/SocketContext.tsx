@@ -29,7 +29,6 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Listen for connection status changes
     const updateConnectionStatus = (data: { connected: boolean }) => {
-      console.log("SocketContext received connectionStatusChanged:", data);
       setIsConnected(data.connected);
     };
 
