@@ -80,9 +80,6 @@ export class User {
   @OneToMany(() => ListingDetail, (listing) => listing.seller)
   listings: ListingDetail[];
 
-  @OneToMany(() => Transaction, (transaction) => transaction.buyer)
-  purchases: Transaction[];
-
   @OneToMany(() => Transaction, (transaction) => transaction.seller)
   sales: Transaction[];
 

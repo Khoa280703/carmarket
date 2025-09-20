@@ -12,8 +12,16 @@ import {
 } from '../../entities/listing-detail.entity';
 import { CarDetail } from '../../entities/car-detail.entity';
 import { CarImage, ImageType } from '../../entities/car-image.entity';
+import { ListingPendingChanges } from '../../entities/listing-pending-changes.entity';
+import {
+  Transaction,
+  TransactionStatus,
+  PaymentMethod,
+} from '../../entities/transaction.entity';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
+import { hasActualChanges } from '../../utils/value-comparison.util';
+import { LogsService } from '../logs/logs.service';
 
 @Injectable()
 export class ListingsService {
@@ -24,6 +32,11 @@ export class ListingsService {
     private readonly carDetailRepository: Repository<CarDetail>,
     @InjectRepository(CarImage)
     private readonly carImageRepository: Repository<CarImage>,
+    @InjectRepository(ListingPendingChanges)
+    private readonly pendingChangesRepository: Repository<ListingPendingChanges>,
+    @InjectRepository(Transaction)
+    private readonly transactionRepository: Repository<Transaction>,
+    private readonly logsService: LogsService,
   ) {}
 
   async create(
@@ -65,20 +78,51 @@ export class ListingsService {
       await this.carImageRepository.save(carImages);
     }
 
+    // Log the listing creation
+    await this.logsService.logListingAction(
+      userId,
+      savedListing.id,
+      'created',
+      {
+        title: savedListing.title,
+        price: savedListing.price,
+        make: carDetail.make,
+        model: carDetail.model,
+        year: carDetail.year,
+      },
+    );
+
     return this.findOne(savedListing.id);
   }
 
   async findAll(page: number = 1, limit: number = 10) {
-    const [listings, total] = await this.listingRepository.findAndCount({
-      where: { status: ListingStatus.APPROVED, isActive: true },
-      relations: ['carDetail', 'carDetail.images', 'seller'],
-      order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    // Get both approved and sold listings, with approved first
+    const [approvedListings, approvedTotal] =
+      await this.listingRepository.findAndCount({
+        where: { status: ListingStatus.APPROVED, isActive: true },
+        relations: ['carDetail', 'carDetail.images', 'seller'],
+        order: { createdAt: 'DESC' },
+      });
+
+    const [soldListings, soldTotal] = await this.listingRepository.findAndCount(
+      {
+        where: { status: ListingStatus.SOLD, isActive: true },
+        relations: ['carDetail', 'carDetail.images', 'seller'],
+        order: { createdAt: 'DESC' },
+      },
+    );
+
+    // Combine listings with approved first, then sold
+    const allListings = [...approvedListings, ...soldListings];
+    const total = approvedTotal + soldTotal;
+
+    // Apply pagination to the combined list
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedListings = allListings.slice(startIndex, endIndex);
 
     return {
-      listings,
+      listings: paginatedListings,
       pagination: {
         page,
         limit,
@@ -126,16 +170,65 @@ export class ListingsService {
 
     const { carDetail, ...listingData } = updateListingDto;
 
-    // Update car detail if provided
+    // Store original values for comparison
+    const originalValues = {
+      ...listing,
+      carDetail: listing.carDetail,
+    };
+
+    // Prepare changes object
+    const changes: Record<string, any> = {};
+    const carDetailChanges: Record<string, any> = {};
+
+    // Check for listing changes
+    Object.keys(listingData).forEach((key) => {
+      if (
+        listingData[key] !== undefined &&
+        hasActualChanges(originalValues[key], listingData[key])
+      ) {
+        changes[key] = listingData[key];
+      }
+    });
+
+    // Check for car detail changes
     if (carDetail) {
-      await this.carDetailRepository.update(listing.carDetailId, carDetail);
+      Object.keys(carDetail).forEach((key) => {
+        if (
+          carDetail[key] !== undefined &&
+          hasActualChanges(originalValues.carDetail[key], carDetail[key])
+        ) {
+          carDetailChanges[key] = carDetail[key];
+        }
+      });
     }
 
-    // Update listing
-    await this.listingRepository.update(id, {
-      ...listingData,
-      status: ListingStatus.PENDING, // Reset to pending after update
-    });
+    // If there are changes, store them as pending changes
+    if (
+      Object.keys(changes).length > 0 ||
+      Object.keys(carDetailChanges).length > 0
+    ) {
+      const pendingChange = this.pendingChangesRepository.create({
+        listingId: id,
+        changedByUserId: userId,
+        changes: {
+          listing: changes,
+          carDetail: carDetailChanges,
+        },
+        originalValues: {
+          listing: originalValues,
+          carDetail: originalValues.carDetail,
+        },
+      });
+
+      await this.pendingChangesRepository.save(pendingChange);
+
+      // Only update status to pending if there are actual changes
+      if (listing.status !== ListingStatus.PENDING) {
+        await this.listingRepository.update(id, {
+          status: ListingStatus.PENDING,
+        });
+      }
+    }
 
     return this.findOne(id);
   }
@@ -156,5 +249,133 @@ export class ListingsService {
     await this.listingRepository.remove(listing);
 
     return { message: 'Listing deleted successfully' };
+  }
+
+  async getPendingChanges(listingId: string): Promise<ListingPendingChanges[]> {
+    return this.pendingChangesRepository.find({
+      where: { listingId, isApplied: false },
+      relations: ['changedBy'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async applyPendingChanges(
+    listingId: string,
+    pendingChangeId: string,
+    appliedByUserId: string,
+  ): Promise<ListingDetail> {
+    const pendingChange = await this.pendingChangesRepository.findOne({
+      where: { id: pendingChangeId, listingId, isApplied: false },
+    });
+
+    if (!pendingChange) {
+      throw new NotFoundException('Pending change not found');
+    }
+
+    const { changes } = pendingChange;
+
+    // Apply listing changes
+    if (changes.listing && Object.keys(changes.listing).length > 0) {
+      await this.listingRepository.update(listingId, changes.listing);
+    }
+
+    // Apply car detail changes
+    if (changes.carDetail && Object.keys(changes.carDetail).length > 0) {
+      const listing = await this.listingRepository.findOne({
+        where: { id: listingId },
+        relations: ['carDetail'],
+      });
+
+      if (listing) {
+        await this.carDetailRepository.update(
+          listing.carDetailId,
+          changes.carDetail,
+        );
+      }
+    }
+
+    // Mark pending change as applied
+    await this.pendingChangesRepository.update(pendingChangeId, {
+      isApplied: true,
+      appliedAt: new Date(),
+      appliedByUserId,
+    });
+
+    return this.findOne(listingId);
+  }
+
+  async rejectPendingChanges(
+    pendingChangeId: string,
+    rejectedByUserId: string,
+    rejectionReason?: string,
+  ): Promise<void> {
+    const pendingChange = await this.pendingChangesRepository.findOne({
+      where: { id: pendingChangeId, isApplied: false },
+    });
+
+    if (!pendingChange) {
+      throw new NotFoundException('Pending change not found');
+    }
+
+    // Mark as applied but with rejection (we can add a rejection field later)
+    await this.pendingChangesRepository.update(pendingChangeId, {
+      isApplied: true,
+      appliedAt: new Date(),
+      appliedByUserId: rejectedByUserId,
+    });
+  }
+
+  async updateStatus(
+    id: string,
+    userId: string,
+    status: string,
+  ): Promise<ListingDetail> {
+    const listing = await this.listingRepository.findOne({
+      where: { id },
+    });
+
+    if (!listing) {
+      throw new NotFoundException('Listing not found');
+    }
+
+    if (listing.sellerId !== userId) {
+      throw new ForbiddenException('You can only update your own listings');
+    }
+
+    // Validate status
+    if (!Object.values(ListingStatus).includes(status as ListingStatus)) {
+      throw new BadRequestException('Invalid status');
+    }
+
+    await this.listingRepository.update(id, {
+      status: status as ListingStatus,
+    });
+
+    // If marking as sold, create a transaction record
+    if (status === ListingStatus.SOLD) {
+      try {
+        const transactionNumber = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+
+        const transaction = this.transactionRepository.create({
+          transactionNumber,
+          amount: listing.price,
+          platformFee: 0, // No platform fee for offline transactions
+          totalAmount: listing.price,
+          status: TransactionStatus.COMPLETED, // Mark as completed since it's an offline sale
+          paymentMethod: PaymentMethod.CASH, // Default to cash for offline transactions
+          notes: 'Offline sale - marked as sold by seller',
+          completedAt: new Date(),
+          sellerId: listing.sellerId,
+          listingId: listing.id,
+        });
+
+        await this.transactionRepository.save(transaction);
+      } catch (error) {
+        console.error('Error creating transaction:', error);
+        throw new Error('Failed to create transaction record');
+      }
+    }
+
+    return this.findOne(id);
   }
 }

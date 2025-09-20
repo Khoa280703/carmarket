@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import {
   Car,
@@ -8,9 +8,17 @@ import {
   Eye,
   Heart,
   MessageCircle,
+  Phone,
 } from "lucide-react";
 import { Card, CardContent } from "./ui/Card";
 import { Button } from "./ui/Button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "./ui/Dialog";
 import { formatPrice, formatNumber, formatRelativeTime } from "../lib/utils";
 import { FavoritesService } from "../services/favorites.service";
 import { ChatService } from "../services/chat.service";
@@ -23,6 +31,7 @@ interface CarCardProps {
   showActions?: boolean;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onMarkAsSold?: (id: string) => void;
   onFavoriteChange?: (listingId: string, isFavorite: boolean) => void;
 }
 
@@ -31,11 +40,14 @@ export function CarCard({
   showActions = false,
   onEdit,
   onDelete,
+  onMarkAsSold,
   onFavoriteChange,
 }: CarCardProps) {
   const { user, isAuthenticated } = useAuthStore();
+  const navigate = useNavigate();
   const [isFavorite, setIsFavorite] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPhoneNumber, setShowPhoneNumber] = useState(false);
 
   const primaryImage =
     listing.carDetail.images.find((img) => img.isPrimary) ||
@@ -93,12 +105,35 @@ export function CarCard({
     }
   };
 
+  const handleContactSeller = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!isAuthenticated) {
+      toast.error("Please log in to contact the seller");
+      navigate("/login", {
+        state: { from: { pathname: `/cars/${listing.id}` } },
+      });
+      return;
+    }
+
+    if (user?.id === listing.seller.id) {
+      toast.error("You cannot contact yourself");
+      return;
+    }
+
+    setShowPhoneNumber(true);
+  };
+
   const handleSendMessage = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
     if (!isAuthenticated) {
       toast.error("Please log in to send messages");
+      navigate("/login", {
+        state: { from: { pathname: `/cars/${listing.id}` } },
+      });
       return;
     }
 
@@ -129,10 +164,21 @@ export function CarCard({
   };
 
   return (
-    <Card className="hover:shadow-lg transition-shadow duration-200 overflow-hidden">
+    <Card className="hover:shadow-lg transition-shadow duration-200 overflow-hidden relative">
       <Link to={`/cars/${listing.id}`}>
         {/* Image */}
-        <div className="relative h-48 bg-gray-200 overflow-hidden">
+        <div className="relative h-48 overflow-hidden">
+          {/* Diagonal SOLD tag for sold listings - only on image */}
+          {listing.status === "sold" && (
+            <div className="absolute inset-0 z-10 pointer-events-none">
+              <div className="absolute inset-0 bg-gray-800/50 flex items-center justify-center">
+                {" "}
+                <div className="text-white text-2xl font-bold transform rotate-45 tracking-wider">
+                  SOLD
+                </div>
+              </div>
+            </div>
+          )}
           {primaryImage ? (
             <img
               src={`http://localhost:3000${primaryImage.url}`}
@@ -175,9 +221,16 @@ export function CarCard({
       <CardContent className="p-4">
         <Link to={`/cars/${listing.id}`}>
           {/* Title */}
-          <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 hover:text-blue-600 transition-colors">
-            {listing.title}
-          </h3>
+          <div className="mb-2">
+            <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 hover:text-blue-600 transition-colors">
+              {listing.title}
+            </h3>
+            {listing.status === "sold" && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 mt-1">
+                ✓ Sold
+              </span>
+            )}
+          </div>
 
           {/* Car Info */}
           <div className="text-sm text-gray-600 mb-3 space-y-1">
@@ -233,60 +286,136 @@ export function CarCard({
         </Link>
 
         {/* Action Buttons for All Users */}
-        {!showActions && isAuthenticated && user?.id !== listing.seller.id && (
-          <div className="flex space-x-2 mt-4 pt-4 border-t border-gray-200">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleToggleFavorite}
-              disabled={isLoading}
-              className={`flex-1 ${isFavorite ? "text-red-500 border-red-500 hover:bg-red-50" : ""}`}
-            >
-              <Heart
-                className={`w-4 h-4 mr-1 ${isFavorite ? "fill-current text-red-500" : "text-gray-400"}`}
-              />
-              {isFavorite ? "Remove" : "Save"}
-            </Button>
-            <Button
-              size="sm"
-              className="flex-1 bg-blue-600 text-white hover:bg-blue-700"
-              onClick={handleSendMessage}
-              disabled={isLoading}
-            >
-              <MessageCircle className="w-4 h-4 mr-1" />
-              Message
-            </Button>
-          </div>
-        )}
+        {!showActions &&
+          user?.id !== listing.seller.id &&
+          listing.status !== "sold" && (
+            <div className="flex space-x-2 mt-4 pt-4 border-t border-gray-200">
+              {isAuthenticated && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleToggleFavorite}
+                  disabled={isLoading}
+                  className={`flex-1 ${isFavorite ? "text-red-500 border-red-500 hover:bg-red-50" : ""}`}
+                >
+                  <Heart
+                    className={`w-4 h-4 mr-1 ${isFavorite ? "fill-current text-red-500" : "text-gray-400"}`}
+                  />
+                  {isFavorite ? "Remove" : "Save"}
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleContactSeller}
+                disabled={isLoading}
+                className="flex-1"
+              >
+                <Phone className="w-4 h-4 mr-1" />
+                Contact Seller
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1 bg-blue-600 text-white hover:bg-blue-700"
+                onClick={handleSendMessage}
+                disabled={isLoading}
+              >
+                <MessageCircle className="w-4 h-4 mr-1" />
+                Message
+              </Button>
+            </div>
+          )}
 
         {/* Action Buttons for User's Own Listings */}
         {showActions && (
-          <div className="flex space-x-2 mt-4 pt-4 border-t border-gray-200">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={(e: React.MouseEvent) => {
-                e.preventDefault();
-                onEdit?.(listing.id);
-              }}
-              className="flex-1"
-            >
-              Edit
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={(e: React.MouseEvent) => {
-                e.preventDefault();
-                onDelete?.(listing.id);
-              }}
-              className="flex-1"
-            >
-              Delete
-            </Button>
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            {listing.status === "sold" ? (
+              <div className="text-center">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                  ✓ Sold
+                </span>
+              </div>
+            ) : (
+              <div className="flex space-x-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e: React.MouseEvent) => {
+                    e.preventDefault();
+                    onEdit?.(listing.id);
+                  }}
+                  className="flex-1"
+                >
+                  Edit
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={(e: React.MouseEvent) => {
+                    e.preventDefault();
+                    onDelete?.(listing.id);
+                  }}
+                  className="flex-1"
+                >
+                  Delete
+                </Button>
+                {listing.status === "approved" && (
+                  <Button
+                    size="sm"
+                    className="flex-1 bg-green-600 text-white hover:bg-green-700"
+                    onClick={(e: React.MouseEvent) => {
+                      e.preventDefault();
+                      onMarkAsSold?.(listing.id);
+                    }}
+                  >
+                    Mark as Sold
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </CardContent>
+
+      {/* Phone Number Modal */}
+      <Dialog open={showPhoneNumber} onOpenChange={setShowPhoneNumber}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center">Contact Seller</DialogTitle>
+          </DialogHeader>
+          <div className="text-center">
+            <p className="text-gray-600 mb-4">
+              {listing.seller.firstName} {listing.seller.lastName}
+            </p>
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+              <div className="flex items-center justify-center space-x-2">
+                <Phone className="w-5 h-5 text-blue-600" />
+                <span className="text-xl font-mono font-semibold text-gray-900">
+                  {listing.seller.phoneNumber}
+                </span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="flex space-x-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowPhoneNumber(false)}
+              className="flex-1"
+            >
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                window.open(`tel:${listing.seller.phoneNumber}`);
+                setShowPhoneNumber(false);
+              }}
+              className="flex-1 bg-blue-600 text-white hover:bg-blue-700"
+            >
+              Call Now
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

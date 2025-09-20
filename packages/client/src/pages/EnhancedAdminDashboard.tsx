@@ -45,6 +45,8 @@ import {
 import { AdminService } from "../services/admin.service";
 import type { DashboardStats, AdminMetadata } from "../services/admin.service";
 import type { CarMetadata } from "../services/metadata.service";
+import { formatDisplayValue, shouldShowChange } from "../utils/display.util";
+import LogManagementPage from "./LogManagementPage";
 import toast from "react-hot-toast";
 
 interface Listing {
@@ -52,7 +54,12 @@ interface Listing {
   title: string;
   status: string;
   price: number;
+  priceType: string;
   description?: string;
+  location: string;
+  city?: string;
+  state?: string;
+  country?: string;
   createdAt: string;
   seller: {
     id: string;
@@ -65,6 +72,19 @@ interface Listing {
     model: { name: string };
     year: number;
     mileage?: number;
+    bodyType?: string;
+    fuelType?: string;
+    transmission?: string;
+    color?: string;
+    condition?: string;
+    engineSize?: number;
+    enginePower?: number;
+    numberOfDoors?: number;
+    numberOfSeats?: number;
+    vin?: string;
+    registrationNumber?: string;
+    previousOwners?: number;
+    features?: string[];
     images?: Array<{ url: string }>;
   };
   isFeatured: boolean;
@@ -141,6 +161,9 @@ export function EnhancedAdminDashboard() {
     title: string;
     message: string;
   } | null>(null);
+  const [listingWithPendingChanges, setListingWithPendingChanges] =
+    useState<any>(null);
+  const [pendingChangesLoading, setPendingChangesLoading] = useState(false);
 
   // Metadata management state
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -287,30 +310,50 @@ export function EnhancedAdminDashboard() {
     }
   };
 
+  const fetchListingWithPendingChanges = async (listingId: string) => {
+    try {
+      setPendingChangesLoading(true);
+      const response =
+        await AdminService.getListingWithPendingChanges(listingId);
+      setListingWithPendingChanges(response);
+    } catch (error) {
+      toast.error("Failed to load listing with pending changes");
+    } finally {
+      setPendingChangesLoading(false);
+    }
+  };
+
   const confirmAction = async () => {
     console.log("Confirm action clicked", confirmationAction);
     if (!confirmationAction) return;
 
     const { type, target } = confirmationAction;
 
-    // Check for user-related actions
-    if (
-      type.includes("user") ||
-      type === "activate" ||
-      type === "deactivate" ||
-      type === "makeAdmin"
-    ) {
-      await handleUserAction(type, target);
-    }
-    // Check for listing-related actions
-    else if (
-      type.includes("listing") ||
-      type === "approve" ||
-      type === "reject" ||
-      type === "delete" ||
-      type === "featured"
-    ) {
-      await handleListingAction(type, target);
+    try {
+      // Check for user-related actions
+      if (
+        type.includes("user") ||
+        type === "activate" ||
+        type === "deactivate" ||
+        type === "makeAdmin"
+      ) {
+        await handleUserAction(type, target);
+      }
+      // Check for listing-related actions
+      else if (
+        type.includes("listing") ||
+        type === "approve" ||
+        type === "reject" ||
+        type === "delete" ||
+        type === "featured"
+      ) {
+        await handleListingAction(type, target);
+      }
+    } finally {
+      // Always close the modal after action completion
+      setShowConfirmationModal(false);
+      setConfirmationAction(null);
+      setActionReason("");
     }
   };
 
@@ -475,7 +518,7 @@ export function EnhancedAdminDashboard() {
             value={activeTab}
             onValueChange={(value) => setActiveTab(value as any)}
           >
-            <TabsList className="grid w-full grid-cols-7">
+            <TabsList className="grid w-full grid-cols-8">
               <TabsTrigger
                 value="overview"
                 className="flex items-center space-x-2"
@@ -517,6 +560,10 @@ export function EnhancedAdminDashboard() {
               >
                 <TrendingUp className="h-4 w-4" />
                 <span>Analytics</span>
+              </TabsTrigger>
+              <TabsTrigger value="logs" className="flex items-center space-x-2">
+                <Database className="h-4 w-4" />
+                <span>Logs</span>
               </TabsTrigger>
               <TabsTrigger
                 value="settings"
@@ -821,14 +868,18 @@ export function EnhancedAdminDashboard() {
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      onClick={() =>
-                                        setSelectedListing(listing)
-                                      }
+                                      onClick={() => {
+                                        setSelectedListing(listing);
+                                        fetchListingWithPendingChanges(
+                                          listing.id
+                                        );
+                                      }}
                                       title="View listing details"
                                     >
                                       <Eye className="h-4 w-4" />
                                     </Button>
-                                    {listing.status === "pending" && (
+                                    {listing.status?.toLowerCase() ===
+                                      "pending" && (
                                       <>
                                         <Button
                                           size="sm"
@@ -857,6 +908,14 @@ export function EnhancedAdminDashboard() {
                                           <XCircle className="h-4 w-4 text-red-600" />
                                         </Button>
                                       </>
+                                    )}
+                                    {listing.status?.toLowerCase() ===
+                                      "sold" && (
+                                      <div className="flex-1 text-center">
+                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                                          ✓ Sold
+                                        </span>
+                                      </div>
                                     )}
                                     <Button
                                       size="sm"
@@ -1268,6 +1327,11 @@ export function EnhancedAdminDashboard() {
               )}
             </TabsContent>
 
+            {/* Logs Tab */}
+            <TabsContent value="logs">
+              <LogManagementPage />
+            </TabsContent>
+
             {/* Settings Tab */}
             <TabsContent value="settings">
               <div className="space-y-6">
@@ -1308,6 +1372,7 @@ export function EnhancedAdminDashboard() {
                   onClick={() => {
                     setSelectedListing(null);
                     setRejectionReason(undefined);
+                    setListingWithPendingChanges(null);
                   }}
                 >
                   <X className="w-4 h-4" />
@@ -1371,6 +1436,95 @@ export function EnhancedAdminDashboard() {
                         miles
                       </span>
                     </div>
+                    <div>
+                      <span className="text-gray-600">Body Type:</span>
+                      <span className="ml-2 font-medium">
+                        {selectedListing.carDetail?.bodyType}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Fuel Type:</span>
+                      <span className="ml-2 font-medium">
+                        {selectedListing.carDetail?.fuelType}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Transmission:</span>
+                      <span className="ml-2 font-medium">
+                        {selectedListing.carDetail?.transmission}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Color:</span>
+                      <span className="ml-2 font-medium">
+                        {selectedListing.carDetail?.color}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Condition:</span>
+                      <span className="ml-2 font-medium">
+                        {selectedListing.carDetail?.condition}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Engine Size:</span>
+                      <span className="ml-2 font-medium">
+                        {selectedListing.carDetail?.engineSize}L
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Engine Power:</span>
+                      <span className="ml-2 font-medium">
+                        {selectedListing.carDetail?.enginePower} HP
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Doors:</span>
+                      <span className="ml-2 font-medium">
+                        {selectedListing.carDetail?.numberOfDoors}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Seats:</span>
+                      <span className="ml-2 font-medium">
+                        {selectedListing.carDetail?.numberOfSeats}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">VIN:</span>
+                      <span className="ml-2 font-medium">
+                        {selectedListing.carDetail?.vin || "N/A"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Registration:</span>
+                      <span className="ml-2 font-medium">
+                        {selectedListing.carDetail?.registrationNumber || "N/A"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Previous Owners:</span>
+                      <span className="ml-2 font-medium">
+                        {selectedListing.carDetail?.previousOwners || "N/A"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Price Type:</span>
+                      <span className="ml-2 font-medium capitalize">
+                        {selectedListing.priceType}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="text-gray-600">Location:</span>
+                    <p className="mt-1 text-gray-900">
+                      {selectedListing.location}
+                      {selectedListing.city && `, ${selectedListing.city}`}
+                      {selectedListing.state && `, ${selectedListing.state}`}
+                      {selectedListing.country &&
+                        `, ${selectedListing.country}`}
+                    </p>
                   </div>
 
                   <div>
@@ -1379,6 +1533,25 @@ export function EnhancedAdminDashboard() {
                       {selectedListing.description}
                     </p>
                   </div>
+
+                  {selectedListing.carDetail?.features &&
+                    selectedListing.carDetail.features.length > 0 && (
+                      <div>
+                        <span className="text-gray-600">Features:</span>
+                        <div className="mt-1 flex flex-wrap gap-2">
+                          {selectedListing.carDetail.features.map(
+                            (feature: string, index: number) => (
+                              <span
+                                key={index}
+                                className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                              >
+                                {feature}
+                              </span>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                   <div>
                     <span className="text-gray-600">Seller:</span>
@@ -1393,6 +1566,153 @@ export function EnhancedAdminDashboard() {
                   </div>
                 </div>
               </div>
+
+              {/* Pending Changes Section */}
+              {listingWithPendingChanges?.pendingChanges?.length > 0 && (
+                <div className="mt-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <h4 className="text-lg font-semibold text-yellow-800 mb-4">
+                    Pending Changes
+                  </h4>
+                  {pendingChangesLoading ? (
+                    <div className="text-center py-4">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-600 mx-auto"></div>
+                      <p className="text-sm text-yellow-600 mt-2">
+                        Loading pending changes...
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {listingWithPendingChanges.pendingChanges.map(
+                        (change: any, index: number) => (
+                          <div
+                            key={change.id}
+                            className="bg-white p-4 rounded-lg border border-yellow-200"
+                          >
+                            <div className="flex justify-between items-start mb-3">
+                              <div>
+                                <h5 className="font-medium text-gray-900">
+                                  Change #{index + 1}
+                                </h5>
+                                <p className="text-sm text-gray-600">
+                                  Requested by: {change.changedBy?.firstName}{" "}
+                                  {change.changedBy?.lastName}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {new Date(change.createdAt).toLocaleString()}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Listing Changes */}
+                            {change.changes.listing &&
+                              Object.entries(change.changes.listing).some(
+                                ([field, newValue]) =>
+                                  shouldShowChange(
+                                    change.originalValues.listing[field],
+                                    newValue
+                                  )
+                              ) && (
+                                <div className="mb-4">
+                                  <h6 className="font-medium text-gray-800 mb-2">
+                                    Listing Changes:
+                                  </h6>
+                                  <div className="space-y-2">
+                                    {Object.entries(change.changes.listing)
+                                      .filter(([field, newValue]) =>
+                                        shouldShowChange(
+                                          change.originalValues.listing[field],
+                                          newValue
+                                        )
+                                      )
+                                      .map(([field, newValue]) => (
+                                        <div
+                                          key={field}
+                                          className="flex items-center space-x-4 text-sm"
+                                        >
+                                          <span className="font-medium text-gray-600 w-24 capitalize">
+                                            {field
+                                              .replace(/([A-Z])/g, " $1")
+                                              .trim()}
+                                            :
+                                          </span>
+                                          <div className="flex-1">
+                                            <span className="text-red-600 line-through">
+                                              {formatDisplayValue(
+                                                change.originalValues.listing[
+                                                  field
+                                                ]
+                                              )}
+                                            </span>
+                                            <span className="mx-2">→</span>
+                                            <span className="text-green-600 font-medium">
+                                              {formatDisplayValue(newValue)}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      ))}
+                                  </div>
+                                </div>
+                              )}
+
+                            {/* Car Detail Changes */}
+                            {change.changes.carDetail &&
+                              Object.entries(change.changes.carDetail).some(
+                                ([field, newValue]) =>
+                                  shouldShowChange(
+                                    change.originalValues.carDetail[field],
+                                    newValue
+                                  )
+                              ) && (
+                                <div>
+                                  <h6 className="font-medium text-gray-800 mb-2">
+                                    Car Detail Changes:
+                                  </h6>
+                                  <div className="space-y-2">
+                                    {Object.entries(change.changes.carDetail)
+                                      .filter(([field, newValue]) =>
+                                        shouldShowChange(
+                                          change.originalValues.carDetail[
+                                            field
+                                          ],
+                                          newValue
+                                        )
+                                      )
+                                      .map(([field, newValue]) => (
+                                        <div
+                                          key={field}
+                                          className="flex items-center space-x-4 text-sm"
+                                        >
+                                          <span className="font-medium text-gray-600 w-24 capitalize">
+                                            {field
+                                              .replace(/([A-Z])/g, " $1")
+                                              .trim()}
+                                            :
+                                          </span>
+                                          <div className="flex-1">
+                                            <span className="text-red-600 line-through">
+                                              {formatDisplayValue(
+                                                change.originalValues.carDetail[
+                                                  field
+                                                ]
+                                              )}
+                                            </span>
+                                            <span className="mx-2">→</span>
+                                            <span className="text-green-600 font-medium">
+                                              {formatDisplayValue(newValue)}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      ))}
+                                  </div>
+                                </div>
+                              )}
+                          </div>
+                        )
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Rejection Form */}
               {rejectionReason !== undefined && (
@@ -1443,23 +1763,34 @@ export function EnhancedAdminDashboard() {
                     >
                       Close
                     </Button>
-                    <Button
-                      className="bg-green-600 text-white hover:bg-green-700"
-                      onClick={() => {
-                        handleListingAction("approve", selectedListing.id);
-                        setSelectedListing(null);
-                      }}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Approve Listing
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={() => setRejectionReason("")}
-                    >
-                      <XCircle className="w-4 h-4 mr-2" />
-                      Reject
-                    </Button>
+                    {selectedListing?.status?.toLowerCase() === "pending" && (
+                      <>
+                        <Button
+                          className="bg-green-600 text-white hover:bg-green-700"
+                          onClick={() => {
+                            handleListingAction("approve", selectedListing.id);
+                            setSelectedListing(null);
+                          }}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          Approve Listing
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={() => setRejectionReason("")}
+                        >
+                          <XCircle className="w-4 h-4 mr-2" />
+                          Reject
+                        </Button>
+                      </>
+                    )}
+                    {selectedListing?.status?.toLowerCase() === "sold" && (
+                      <div className="text-center">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                          ✓ This listing has been sold
+                        </span>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
@@ -1909,13 +2240,12 @@ export function EnhancedAdminDashboard() {
                 >
                   Cancel
                 </Button>
-                <button
+                <Button
                   onClick={confirmAction}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium"
-                  type="button"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   Confirm
-                </button>
+                </Button>
               </div>
             </div>
           </div>

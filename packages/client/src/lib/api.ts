@@ -48,10 +48,10 @@ class ApiClient {
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
-          // Token expired or invalid
+          // Token expired or invalid - let the auth store handle this
           localStorage.removeItem("accessToken");
           localStorage.removeItem("user");
-          window.location.href = "/login";
+          // Don't redirect here - let the auth store handle the state change
         } else if (error.response?.status === 304) {
           // Handle 304 Not Modified - return the cached data
           return Promise.resolve(error.response);
