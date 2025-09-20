@@ -440,25 +440,36 @@ export function AdminDashboard() {
                         <Eye className="w-4 h-4 mr-1" />
                         View Details
                       </Button>
-                      <Button
-                        size="sm"
-                        className="bg-green-600 text-white hover:bg-green-700"
-                        onClick={() => handleApproveListing(listing.id)}
-                      >
-                        <CheckCircle className="w-4 h-4 mr-1" />
-                        Approve
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => {
-                          setSelectedListing(listing);
-                          setRejectionReason("");
-                        }}
-                      >
-                        <XCircle className="w-4 h-4 mr-1" />
-                        Reject
-                      </Button>
+                      {listing.status === "pending" && (
+                        <>
+                          <Button
+                            size="sm"
+                            className="bg-green-600 text-white hover:bg-green-700"
+                            onClick={() => handleApproveListing(listing.id)}
+                          >
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              setSelectedListing(listing);
+                              setRejectionReason("");
+                            }}
+                          >
+                            <XCircle className="w-4 h-4 mr-1" />
+                            Reject
+                          </Button>
+                        </>
+                      )}
+                      {listing.status === "sold" && (
+                        <div className="flex-1 text-center">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                            ✓ Sold
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -971,23 +982,34 @@ export function AdminDashboard() {
                     >
                       Close
                     </Button>
-                    <Button
-                      className="bg-green-600 text-white hover:bg-green-700"
-                      onClick={() => {
-                        handleApproveListing(selectedListing.id);
-                        setSelectedListing(null);
-                      }}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Approve Listing
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={() => setRejectionReason("")}
-                    >
-                      <XCircle className="w-4 h-4 mr-2" />
-                      Reject
-                    </Button>
+                    {selectedListing?.status === "pending" && (
+                      <>
+                        <Button
+                          className="bg-green-600 text-white hover:bg-green-700"
+                          onClick={() => {
+                            handleApproveListing(selectedListing.id);
+                            setSelectedListing(null);
+                          }}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          Approve Listing
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={() => setRejectionReason("")}
+                        >
+                          <XCircle className="w-4 h-4 mr-2" />
+                          Reject
+                        </Button>
+                      </>
+                    )}
+                    {selectedListing?.status === "sold" && (
+                      <div className="text-center">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                          ✓ This listing has been sold
+                        </span>
+                      </div>
+                    )}
                   </>
                 )}
               </div>

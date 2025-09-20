@@ -26,6 +26,12 @@ export class CarModel {
   @Column({ default: 0 })
   sortOrder: number;
 
+  @Column('text', { array: true, default: [] })
+  bodyStyles: string[];
+
+  @Column({ nullable: true })
+  defaultBodyStyle: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

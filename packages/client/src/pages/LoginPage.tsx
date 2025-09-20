@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,11 +25,18 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
-  const { login, isLoading } = useAuthStore();
+  const { login, isLoading, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
 
   const from = location.state?.from?.pathname || "/";
+
+  // Redirect when authentication state changes
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, navigate, from]);
 
   const {
     register,
@@ -43,7 +50,7 @@ export function LoginPage() {
     try {
       await login(data);
       toast.success("🎉 Welcome back! You're now logged in.");
-      navigate(from, { replace: true });
+      // Navigation will be handled by the useEffect above
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message ||

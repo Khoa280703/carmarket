@@ -84,14 +84,7 @@ export class Transaction {
   updatedAt: Date;
 
   // Relationships
-  @ManyToOne(() => User, (user) => user.purchases, {
-    onDelete: 'CASCADE',
-  })
-  @JoinColumn({ name: 'buyerId' })
-  buyer: User;
-
-  @Column()
-  buyerId: string;
+  // Note: No buyer relationship for offline marketplace - buyers and sellers contact directly
 
   @ManyToOne(() => User, (user) => user.sales, {
     onDelete: 'CASCADE',

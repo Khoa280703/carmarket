@@ -26,7 +26,7 @@ export function NotificationProvider({
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
 
   const refreshConversations = async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !user) return;
 
     try {
       const response = await ChatService.getUserConversations();
@@ -52,8 +52,11 @@ export function NotificationProvider({
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
-      refreshConversations();
+    if (isAuthenticated && user) {
+      // Add a small delay to ensure authentication state is fully initialized
+      const timer = setTimeout(() => {
+        refreshConversations();
+      }, 100);
 
       // Listen for global notifications
       const unsubscribeGlobalNotification = socketService.on(
@@ -73,6 +76,7 @@ export function NotificationProvider({
       const interval = setInterval(refreshConversations, 30000);
 
       return () => {
+        clearTimeout(timer);
         clearInterval(interval);
         unsubscribeGlobalNotification();
       };

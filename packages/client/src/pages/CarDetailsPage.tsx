@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   Car,
@@ -11,6 +11,7 @@ import {
   Mail,
   CheckCircle,
   AlertTriangle,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import {
@@ -20,22 +21,54 @@ import {
   CardTitle,
 } from "../components/ui/Card";
 import { Avatar } from "../components/ui/Avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "../components/ui/Dialog";
 import { ListingService } from "../services/listing.service";
+import { FavoritesService } from "../services/favorites.service";
+import { ChatService } from "../services/chat.service";
+import { useAuthStore } from "../store/auth";
 import { formatPrice, formatNumber, formatRelativeTime } from "../lib/utils";
 import type { ListingDetail } from "../types";
 import toast from "react-hot-toast";
 
 export function CarDetailsPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuthStore();
   const [listing, setListing] = useState<ListingDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPhoneNumber, setShowPhoneNumber] = useState(false);
 
   useEffect(() => {
     if (id) {
       fetchListing(id);
     }
   }, [id]);
+
+  // Check if listing is favorited
+  useEffect(() => {
+    if (isAuthenticated && user && listing) {
+      FavoritesService.checkIfFavorite(listing.id)
+        .then((result) => {
+          setIsFavorite(result);
+        })
+        .catch((error) => {
+          console.error(
+            `Error checking favorite for listing ${listing.id}:`,
+            error
+          );
+          setIsFavorite(false);
+        });
+    }
+  }, [listing, isAuthenticated, user]);
 
   const fetchListing = async (listingId: string) => {
     try {
@@ -46,6 +79,90 @@ export function CarDetailsPage() {
       toast.error("Failed to load listing details");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!isAuthenticated) {
+      toast.error("Please log in to add favorites");
+      return;
+    }
+
+    if (!listing) return;
+
+    setIsLoading(true);
+    const previousState = isFavorite;
+
+    try {
+      if (isFavorite) {
+        await FavoritesService.removeFromFavorites(listing.id);
+        setIsFavorite(false);
+        toast.success("Removed from favorites");
+      } else {
+        await FavoritesService.addToFavorites(listing.id);
+        setIsFavorite(true);
+        toast.success("Added to favorites");
+      }
+    } catch (error: any) {
+      // Revert state on error
+      setIsFavorite(previousState);
+      const errorMessage =
+        error.response?.data?.message || "Failed to update favorites";
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleContactSeller = () => {
+    if (!isAuthenticated) {
+      toast.error("Please log in to contact the seller");
+      navigate("/login", {
+        state: { from: { pathname: `/cars/${listing?.id}` } },
+      });
+      return;
+    }
+
+    if (!listing) return;
+
+    if (user?.id === listing.seller.id) {
+      toast.error("You cannot contact yourself");
+      return;
+    }
+
+    setShowPhoneNumber(true);
+  };
+
+  const handleSendMessage = async () => {
+    if (!isAuthenticated) {
+      toast.error("Please log in to send messages");
+      navigate("/login", {
+        state: { from: { pathname: `/cars/${listing?.id}` } },
+      });
+      return;
+    }
+
+    if (!listing) return;
+
+    if (user?.id === listing.seller.id) {
+      toast.error("You cannot message yourself");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await ChatService.startConversation(listing.id);
+
+      toast.success("Conversation started! Check your messages.");
+      // Navigate to chat page or open chat modal
+      window.location.href = `/chat/${response.conversation.id}`;
+    } catch (error: any) {
+      console.error("Failed to start conversation:", error);
+      const errorMessage =
+        error.response?.data?.message || "Failed to start conversation";
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -182,16 +299,31 @@ export function CarDetailsPage() {
                 </div>
               </div>
 
-              <div className="flex space-x-4">
-                <Button className="flex-1 bg-blue-600 text-white hover:bg-blue-700">
-                  <Phone className="w-4 h-4 mr-2" />
-                  Contact Seller
-                </Button>
-                <Button variant="outline" className="flex-1">
-                  <Heart className="w-4 h-4 mr-2" />
-                  Save Listing
-                </Button>
-              </div>
+              {listing.status !== "sold" && (
+                <div className="flex space-x-4">
+                  <Button
+                    className="flex-1 bg-blue-600 text-white hover:bg-blue-700"
+                    onClick={handleContactSeller}
+                    disabled={isLoading}
+                  >
+                    <Phone className="w-4 h-4 mr-2" />
+                    Contact Seller
+                  </Button>
+                  {isAuthenticated && (
+                    <Button
+                      variant="outline"
+                      className={`flex-1 ${isFavorite ? "text-red-500 border-red-500 hover:bg-red-50" : ""}`}
+                      onClick={handleToggleFavorite}
+                      disabled={isLoading}
+                    >
+                      <Heart
+                        className={`w-4 h-4 mr-2 ${isFavorite ? "fill-current text-red-500" : ""}`}
+                      />
+                      {isFavorite ? "Remove" : "Save Listing"}
+                    </Button>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -323,16 +455,27 @@ export function CarDetailsPage() {
                   <MapPin className="w-4 h-4 text-gray-400 mr-3" />
                   <span>{listing.location}</span>
                 </div>
-                <div className="flex space-x-4">
-                  <Button className="flex-1 bg-blue-600 text-white hover:bg-blue-700">
-                    <Phone className="w-4 h-4 mr-2" />
-                    Call Seller
-                  </Button>
-                  <Button variant="outline" className="flex-1">
-                    <Mail className="w-4 h-4 mr-2" />
-                    Send Message
-                  </Button>
-                </div>
+                {listing.status !== "sold" && (
+                  <div className="flex space-x-4">
+                    <Button
+                      className="flex-1 bg-blue-600 text-white hover:bg-blue-700"
+                      onClick={handleContactSeller}
+                      disabled={isLoading}
+                    >
+                      <Phone className="w-4 h-4 mr-2" />
+                      Call Seller
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={handleSendMessage}
+                      disabled={isLoading}
+                    >
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      Send Message
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -365,6 +508,48 @@ export function CarDetailsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Phone Number Modal */}
+      <Dialog open={showPhoneNumber} onOpenChange={setShowPhoneNumber}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center">Contact Seller</DialogTitle>
+          </DialogHeader>
+          <div className="text-center">
+            <p className="text-gray-600 mb-4">
+              {listing?.seller.firstName} {listing?.seller.lastName}
+            </p>
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+              <div className="flex items-center justify-center space-x-2">
+                <Phone className="w-5 h-5 text-blue-600" />
+                <span className="text-xl font-mono font-semibold text-gray-900">
+                  {listing?.seller.phoneNumber}
+                </span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="flex space-x-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowPhoneNumber(false)}
+              className="flex-1"
+            >
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                if (listing?.seller.phoneNumber) {
+                  window.open(`tel:${listing.seller.phoneNumber}`);
+                  setShowPhoneNumber(false);
+                }
+              }}
+              className="flex-1 bg-blue-600 text-white hover:bg-blue-700"
+            >
+              Call Now
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

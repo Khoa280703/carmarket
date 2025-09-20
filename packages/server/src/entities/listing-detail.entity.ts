@@ -12,6 +12,7 @@ import {
 import { User } from './user.entity';
 import { CarDetail } from './car-detail.entity';
 import { Transaction } from './transaction.entity';
+import { ListingPendingChanges } from './listing-pending-changes.entity';
 
 export enum ListingStatus {
   DRAFT = 'draft',
@@ -138,6 +139,12 @@ export class ListingDetail {
 
   @OneToMany(() => Transaction, (transaction) => transaction.listing)
   transactions: Transaction[];
+
+  @OneToMany(
+    () => ListingPendingChanges,
+    (pendingChange) => pendingChange.listing,
+  )
+  pendingChanges: ListingPendingChanges[];
 
   // Virtual properties
   get isExpired(): boolean {

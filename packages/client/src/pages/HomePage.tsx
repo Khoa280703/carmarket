@@ -3,6 +3,7 @@ import { Search, Filter, Car, X } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Card, CardContent } from "../components/ui/Card";
+import { EnhancedSelect } from "../components/ui/EnhancedSelect";
 import { CarCard } from "../components/CarCard";
 import { useAuthStore } from "../store/auth";
 import type { ListingDetail, SearchFilters } from "../types";
@@ -16,7 +17,19 @@ export function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<SearchFilters>({});
+  const [sortBy, setSortBy] = useState<string>("newest");
   const { metadata } = useMetadata();
+
+  const sortOptions = [
+    { value: "newest", label: "Newest First" },
+    { value: "oldest", label: "Oldest First" },
+    { value: "price-low", label: "Price: Low to High" },
+    { value: "price-high", label: "Price: High to Low" },
+    { value: "year-new", label: "Year: Newest First" },
+    { value: "year-old", label: "Year: Oldest First" },
+    { value: "mileage-low", label: "Mileage: Low to High" },
+    { value: "mileage-high", label: "Mileage: High to Low" },
+  ];
 
   useEffect(() => {
     fetchListings();
@@ -77,6 +90,45 @@ export function HomePage() {
     fetchListings();
   };
 
+  const sortListings = (listingsToSort: ListingDetail[]) => {
+    const sorted = [...listingsToSort];
+
+    switch (sortBy) {
+      case "newest":
+        return sorted.sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      case "oldest":
+        return sorted.sort(
+          (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+      case "price-low":
+        return sorted.sort((a, b) => (a.price || 0) - (b.price || 0));
+      case "price-high":
+        return sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
+      case "year-new":
+        return sorted.sort(
+          (a, b) => (b.carDetail?.year || 0) - (a.carDetail?.year || 0)
+        );
+      case "year-old":
+        return sorted.sort(
+          (a, b) => (a.carDetail?.year || 0) - (b.carDetail?.year || 0)
+        );
+      case "mileage-low":
+        return sorted.sort(
+          (a, b) => (a.carDetail?.mileage || 0) - (b.carDetail?.mileage || 0)
+        );
+      case "mileage-high":
+        return sorted.sort(
+          (a, b) => (b.carDetail?.mileage || 0) - (a.carDetail?.mileage || 0)
+        );
+      default:
+        return sorted;
+    }
+  };
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -129,6 +181,16 @@ export function HomePage() {
                   Clear Filters
                 </Button>
               )}
+              <div className="relative">
+                <EnhancedSelect
+                  options={sortOptions}
+                  value={sortBy}
+                  onValueChange={(value) => setSortBy(value as string)}
+                  placeholder="Sort by"
+                  searchable={false}
+                  multiple={false}
+                />
+              </div>
               <Button
                 variant="outline"
                 onClick={() => setShowFilters(!showFilters)}
@@ -149,23 +211,25 @@ export function HomePage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Make
                     </label>
-                    <select
+                    <EnhancedSelect
+                      options={[
+                        { value: "", label: "Any Make" },
+                        ...(metadata.makes?.map((make) => ({
+                          value: make.name,
+                          label: make.displayName,
+                        })) || []),
+                      ]}
                       value={filters.make || ""}
-                      onChange={(e) =>
+                      onValueChange={(value) =>
                         setFilters({
                           ...filters,
-                          make: e.target.value || undefined,
+                          make: (value as string) || undefined,
                         })
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Any Make</option>
-                      {metadata.makes?.map((make) => (
-                        <option key={make.id} value={make.name}>
-                          {make.displayName}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Any Make"
+                      searchable={true}
+                      multiple={false}
+                    />
                   </div>
 
                   <div>
@@ -280,23 +344,25 @@ export function HomePage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Fuel Type
                     </label>
-                    <select
+                    <EnhancedSelect
+                      options={[
+                        { value: "", label: "Any Fuel" },
+                        ...(metadata.fuelTypes?.map((type) => ({
+                          value: type.value,
+                          label: type.displayValue,
+                        })) || []),
+                      ]}
                       value={filters.fuelType || ""}
-                      onChange={(e) =>
+                      onValueChange={(value) =>
                         setFilters({
                           ...filters,
-                          fuelType: e.target.value || undefined,
+                          fuelType: (value as string) || undefined,
                         })
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Any Fuel</option>
-                      {metadata.fuelTypes.map((type) => (
-                        <option key={type.id} value={type.value}>
-                          {type.displayValue}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Any Fuel"
+                      searchable={true}
+                      multiple={false}
+                    />
                   </div>
 
                   {/* Body Type */}
@@ -304,23 +370,25 @@ export function HomePage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Body Type
                     </label>
-                    <select
+                    <EnhancedSelect
+                      options={[
+                        { value: "", label: "Any Body Type" },
+                        ...(metadata.bodyTypes?.map((type) => ({
+                          value: type.value,
+                          label: type.displayValue,
+                        })) || []),
+                      ]}
                       value={filters.bodyType || ""}
-                      onChange={(e) =>
+                      onValueChange={(value) =>
                         setFilters({
                           ...filters,
-                          bodyType: e.target.value || undefined,
+                          bodyType: (value as string) || undefined,
                         })
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Any Body Type</option>
-                      {metadata.bodyTypes.map((type) => (
-                        <option key={type.id} value={type.value}>
-                          {type.displayValue}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Any Body Type"
+                      searchable={true}
+                      multiple={false}
+                    />
                   </div>
 
                   {/* Transmission */}
@@ -328,23 +396,25 @@ export function HomePage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Transmission
                     </label>
-                    <select
+                    <EnhancedSelect
+                      options={[
+                        { value: "", label: "Any Transmission" },
+                        ...(metadata.transmissionTypes?.map((type) => ({
+                          value: type.value,
+                          label: type.displayValue,
+                        })) || []),
+                      ]}
                       value={filters.transmission || ""}
-                      onChange={(e) =>
+                      onValueChange={(value) =>
                         setFilters({
                           ...filters,
-                          transmission: e.target.value || undefined,
+                          transmission: (value as string) || undefined,
                         })
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Any Transmission</option>
-                      {metadata.transmissionTypes.map((type) => (
-                        <option key={type.id} value={type.value}>
-                          {type.displayValue}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Any Transmission"
+                      searchable={true}
+                      multiple={false}
+                    />
                   </div>
 
                   {/* Location */}
@@ -403,12 +473,14 @@ export function HomePage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {listings.slice(0, 6).map((listing) => (
-                <CarCard
-                  key={`${listing.id}-${user?.id || "anonymous"}`}
-                  listing={listing}
-                />
-              ))}
+              {sortListings(listings)
+                .slice(0, 6)
+                .map((listing) => (
+                  <CarCard
+                    key={`${listing.id}-${user?.id || "anonymous"}`}
+                    listing={listing}
+                  />
+                ))}
             </div>
           )}
 

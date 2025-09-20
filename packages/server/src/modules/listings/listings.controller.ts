@@ -11,6 +11,7 @@ import {
   ParseIntPipe,
   UseInterceptors,
   UploadedFiles,
+  Put,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -114,5 +115,46 @@ export class ListingsController {
     }));
 
     return { images };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/pending-changes')
+  getPendingChanges(@Param('id') id: string) {
+    return this.listingsService.getPendingChanges(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put(':id/pending-changes/:changeId/apply')
+  applyPendingChanges(
+    @Param('id') id: string,
+    @Param('changeId') changeId: string,
+    @CurrentUser() user: User,
+  ) {
+    return this.listingsService.applyPendingChanges(id, changeId, user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put(':id/pending-changes/:changeId/reject')
+  rejectPendingChanges(
+    @Param('id') id: string,
+    @Param('changeId') changeId: string,
+    @CurrentUser() user: User,
+    @Body() body: { reason?: string },
+  ) {
+    return this.listingsService.rejectPendingChanges(
+      changeId,
+      user.id,
+      body.reason,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put(':id/status')
+  updateStatus(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+    @Body() body: { status: string },
+  ) {
+    return this.listingsService.updateStatus(id, user.id, body.status);
   }
 }

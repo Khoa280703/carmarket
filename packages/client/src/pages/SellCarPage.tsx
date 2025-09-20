@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
+import { EnhancedSelect } from "../components/ui/EnhancedSelect";
 import {
   Card,
   CardContent,
@@ -66,6 +67,16 @@ export function SellCarPage() {
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [selectedMakeId, setSelectedMakeId] = useState<string>("");
+  const [availableModels, setAvailableModels] = useState<any[]>([]);
+  const [formValues, setFormValues] = useState({
+    priceType: "",
+    bodyType: "",
+    fuelType: "",
+    transmission: "",
+    color: "",
+    condition: "",
+  });
   const navigate = useNavigate();
   const { metadata, loading: metadataLoading } = useMetadata();
 
@@ -73,6 +84,7 @@ export function SellCarPage() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
+    setValue,
   } = useForm<ListingForm>({
     resolver: zodResolver(listingSchema),
     defaultValues: {
@@ -82,6 +94,43 @@ export function SellCarPage() {
       country: "USA",
     },
   });
+
+  // Load models when make is selected
+  useEffect(() => {
+    const loadModels = async () => {
+      if (selectedMakeId && metadata?.makes) {
+        const selectedMake = metadata.makes.find(
+          (make) => make.id === selectedMakeId
+        );
+        if (selectedMake) {
+          setValue("make", selectedMake.name);
+          setValue("model", ""); // Reset model when make changes
+
+          try {
+            // Fetch models for the selected make
+            const response = await fetch(
+              `http://localhost:3000/api/metadata/makes/${selectedMakeId}/models`
+            );
+            const models = await response.json();
+            setAvailableModels(models);
+          } catch (error) {
+            console.error("Failed to fetch models:", error);
+            setAvailableModels([]);
+          }
+        }
+      } else {
+        setAvailableModels([]);
+      }
+    };
+
+    loadModels();
+  }, [selectedMakeId, metadata, setValue]);
+
+  // Handle form value changes
+  const handleFormValueChange = (field: string, value: string) => {
+    setFormValues((prev) => ({ ...prev, [field]: value }));
+    setValue(field as any, value);
+  };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -321,17 +370,27 @@ export function SellCarPage() {
                 >
                   Price Type
                 </label>
-                <select
-                  id="priceType"
-                  {...register("priceType")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  {metadata.priceTypes.map((type) => (
-                    <option key={type.id} value={type.value}>
-                      {type.displayValue}
-                    </option>
-                  ))}
-                </select>
+                <EnhancedSelect
+                  options={
+                    metadata?.priceTypes?.map((type) => ({
+                      value: type.value,
+                      label: type.displayValue,
+                    })) || []
+                  }
+                  value={formValues.priceType}
+                  onValueChange={(value) =>
+                    handleFormValueChange("priceType", value as string)
+                  }
+                  placeholder="Select price type"
+                  searchable={true}
+                  multiple={false}
+                  error={!!errors.priceType}
+                />
+                {errors.priceType && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.priceType.message}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -399,11 +458,21 @@ export function SellCarPage() {
                 >
                   Make
                 </label>
-                <Input
-                  id="make"
-                  {...register("make")}
-                  placeholder="Toyota"
-                  className={errors.make ? "border-red-500" : ""}
+                <EnhancedSelect
+                  options={
+                    metadata?.makes?.map((make) => ({
+                      value: make.id,
+                      label: make.displayName,
+                    })) || []
+                  }
+                  value={selectedMakeId}
+                  onValueChange={(value) => {
+                    setSelectedMakeId(value as string);
+                  }}
+                  placeholder="Select a make"
+                  searchable={true}
+                  multiple={false}
+                  error={!!errors.make}
                 />
                 {errors.make && (
                   <p className="mt-1 text-sm text-red-600">
@@ -419,11 +488,27 @@ export function SellCarPage() {
                 >
                   Model
                 </label>
-                <Input
-                  id="model"
-                  {...register("model")}
-                  placeholder="Camry"
-                  className={errors.model ? "border-red-500" : ""}
+                <EnhancedSelect
+                  options={availableModels.map((model) => ({
+                    value: model.id,
+                    label: model.displayName,
+                  }))}
+                  onValueChange={(value) => {
+                    const selectedModel = availableModels.find(
+                      (model) => model.id === value
+                    );
+                    if (selectedModel) {
+                      setValue("model", selectedModel.name);
+                      // Auto-set body type if available
+                      if (selectedModel.defaultBodyStyle) {
+                        setValue("bodyType", selectedModel.defaultBodyStyle);
+                      }
+                    }
+                  }}
+                  placeholder="Select a model"
+                  searchable={true}
+                  multiple={false}
+                  error={!!errors.model}
                 />
                 {errors.model && (
                   <p className="mt-1 text-sm text-red-600">
@@ -462,20 +547,22 @@ export function SellCarPage() {
                 >
                   Body Type
                 </label>
-                <select
-                  id="bodyType"
-                  {...register("bodyType")}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.bodyType ? "border-red-500" : "border-gray-300"
-                  }`}
-                >
-                  <option value="">Select body type</option>
-                  {metadata.bodyTypes.map((type) => (
-                    <option key={type.id} value={type.value}>
-                      {type.displayValue}
-                    </option>
-                  ))}
-                </select>
+                <EnhancedSelect
+                  options={
+                    metadata?.bodyTypes?.map((type) => ({
+                      value: type.value,
+                      label: type.displayValue,
+                    })) || []
+                  }
+                  value={formValues.bodyType}
+                  onValueChange={(value) =>
+                    handleFormValueChange("bodyType", value as string)
+                  }
+                  placeholder="Select body type"
+                  searchable={true}
+                  multiple={false}
+                  error={!!errors.bodyType}
+                />
                 {errors.bodyType && (
                   <p className="mt-1 text-sm text-red-600">
                     {errors.bodyType.message}
@@ -490,20 +577,22 @@ export function SellCarPage() {
                 >
                   Fuel Type
                 </label>
-                <select
-                  id="fuelType"
-                  {...register("fuelType")}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.fuelType ? "border-red-500" : "border-gray-300"
-                  }`}
-                >
-                  <option value="">Select fuel type</option>
-                  {metadata.fuelTypes.map((type) => (
-                    <option key={type.id} value={type.value}>
-                      {type.displayValue}
-                    </option>
-                  ))}
-                </select>
+                <EnhancedSelect
+                  options={
+                    metadata?.fuelTypes?.map((type) => ({
+                      value: type.value,
+                      label: type.displayValue,
+                    })) || []
+                  }
+                  value={formValues.fuelType}
+                  onValueChange={(value) =>
+                    handleFormValueChange("fuelType", value as string)
+                  }
+                  placeholder="Select fuel type"
+                  searchable={true}
+                  multiple={false}
+                  error={!!errors.fuelType}
+                />
                 {errors.fuelType && (
                   <p className="mt-1 text-sm text-red-600">
                     {errors.fuelType.message}
@@ -518,20 +607,22 @@ export function SellCarPage() {
                 >
                   Transmission
                 </label>
-                <select
-                  id="transmission"
-                  {...register("transmission")}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.transmission ? "border-red-500" : "border-gray-300"
-                  }`}
-                >
-                  <option value="">Select transmission</option>
-                  {metadata.transmissionTypes.map((type) => (
-                    <option key={type.id} value={type.value}>
-                      {type.displayValue}
-                    </option>
-                  ))}
-                </select>
+                <EnhancedSelect
+                  options={
+                    metadata?.transmissionTypes?.map((type) => ({
+                      value: type.value,
+                      label: type.displayValue,
+                    })) || []
+                  }
+                  value={formValues.transmission}
+                  onValueChange={(value) =>
+                    handleFormValueChange("transmission", value as string)
+                  }
+                  placeholder="Select transmission"
+                  searchable={true}
+                  multiple={false}
+                  error={!!errors.transmission}
+                />
                 {errors.transmission && (
                   <p className="mt-1 text-sm text-red-600">
                     {errors.transmission.message}
@@ -612,20 +703,22 @@ export function SellCarPage() {
                 >
                   Color
                 </label>
-                <select
-                  id="color"
-                  {...register("color")}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.color ? "border-red-500" : "border-gray-300"
-                  }`}
-                >
-                  <option value="">Select color</option>
-                  {metadata.colors.map((color) => (
-                    <option key={color.id} value={color.value}>
-                      {color.displayValue}
-                    </option>
-                  ))}
-                </select>
+                <EnhancedSelect
+                  options={
+                    metadata?.colors?.map((color) => ({
+                      value: color.value,
+                      label: color.displayValue,
+                    })) || []
+                  }
+                  value={formValues.color}
+                  onValueChange={(value) =>
+                    handleFormValueChange("color", value as string)
+                  }
+                  placeholder="Select color"
+                  searchable={true}
+                  multiple={false}
+                  error={!!errors.color}
+                />
                 {errors.color && (
                   <p className="mt-1 text-sm text-red-600">
                     {errors.color.message}
@@ -642,20 +735,22 @@ export function SellCarPage() {
                 >
                   Condition
                 </label>
-                <select
-                  id="condition"
-                  {...register("condition")}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.condition ? "border-red-500" : "border-gray-300"
-                  }`}
-                >
-                  <option value="">Select condition</option>
-                  {metadata.conditions.map((type) => (
-                    <option key={type.id} value={type.value}>
-                      {type.displayValue}
-                    </option>
-                  ))}
-                </select>
+                <EnhancedSelect
+                  options={
+                    metadata?.conditions?.map((condition) => ({
+                      value: condition.value,
+                      label: condition.displayValue,
+                    })) || []
+                  }
+                  value={formValues.condition}
+                  onValueChange={(value) =>
+                    handleFormValueChange("condition", value as string)
+                  }
+                  placeholder="Select condition"
+                  searchable={true}
+                  multiple={false}
+                  error={!!errors.condition}
+                />
                 {errors.condition && (
                   <p className="mt-1 text-sm text-red-600">
                     {errors.condition.message}

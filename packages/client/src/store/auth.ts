@@ -22,6 +22,7 @@ interface AuthActions {
   logout: () => void;
   clearError: () => void;
   updateUser: (userData: Partial<User>) => void;
+  initialize: () => void;
 }
 
 export const useAuthStore = create<AuthState & AuthActions>()(
@@ -108,6 +109,34 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         const { user } = get();
         if (user) {
           set({ user: { ...user, ...userData } });
+        }
+      },
+
+      initialize: async () => {
+        set({ isLoading: true });
+        const { accessToken, user } = get();
+        if (accessToken && user) {
+          try {
+            // Validate token by calling the /me endpoint
+            const response = await apiClient.get<User>("/auth/me");
+            set({
+              user: response,
+              isAuthenticated: true,
+              isLoading: false,
+            });
+          } catch (error) {
+            // Token is invalid, clear auth state
+            set({
+              user: null,
+              accessToken: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("user");
+          }
+        } else {
+          set({ isAuthenticated: false, isLoading: false });
         }
       },
     }),

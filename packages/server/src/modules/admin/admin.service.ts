@@ -7,6 +7,7 @@ import {
   ListingStatus,
 } from '../../entities/listing-detail.entity';
 import { Transaction } from '../../entities/transaction.entity';
+import { ListingPendingChanges } from '../../entities/listing-pending-changes.entity';
 
 @Injectable()
 export class AdminService {
@@ -17,6 +18,8 @@ export class AdminService {
     private readonly listingRepository: Repository<ListingDetail>,
     @InjectRepository(Transaction)
     private readonly transactionRepository: Repository<Transaction>,
+    @InjectRepository(ListingPendingChanges)
+    private readonly pendingChangesRepository: Repository<ListingPendingChanges>,
   ) {}
 
   async getAllUsers(page: number = 1, limit: number = 10) {
@@ -72,7 +75,10 @@ export class AdminService {
     };
   }
 
-  async approveListing(listingId: string): Promise<{ message: string }> {
+  async approveListing(
+    listingId: string,
+    adminUserId: string,
+  ): Promise<{ message: string }> {
     const listing = await this.listingRepository.findOne({
       where: { id: listingId },
     });
@@ -81,6 +87,29 @@ export class AdminService {
       throw new NotFoundException('Listing not found');
     }
 
+    // Apply any pending changes first
+    const pendingChanges = await this.pendingChangesRepository.find({
+      where: { listingId, isApplied: false },
+    });
+
+    for (const change of pendingChanges) {
+      // Apply the changes to the listing
+      if (
+        change.changes.listing &&
+        Object.keys(change.changes.listing).length > 0
+      ) {
+        await this.listingRepository.update(listingId, change.changes.listing);
+      }
+
+      // Mark the pending change as applied
+      await this.pendingChangesRepository.update(change.id, {
+        isApplied: true,
+        appliedAt: new Date(),
+        appliedByUserId: adminUserId,
+      });
+    }
+
+    // Update listing status to approved
     await this.listingRepository.update(listingId, {
       status: ListingStatus.APPROVED,
       approvedAt: new Date(),
@@ -108,6 +137,29 @@ export class AdminService {
     });
 
     return { message: 'Listing rejected successfully' };
+  }
+
+  async getListingWithPendingChanges(listingId: string) {
+    const listing = await this.listingRepository.findOne({
+      where: { id: listingId },
+      relations: ['carDetail', 'carDetail.images', 'seller'],
+    });
+
+    if (!listing) {
+      throw new NotFoundException('Listing not found');
+    }
+
+    // Get only non-applied pending changes
+    const pendingChanges = await this.pendingChangesRepository.find({
+      where: { listingId, isApplied: false },
+      relations: ['changedBy'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return {
+      ...listing,
+      pendingChanges,
+    };
   }
 
   async getTransactions(page: number = 1, limit: number = 10) {

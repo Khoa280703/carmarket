@@ -13,7 +13,8 @@ import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { UserRole } from '../../entities/user.entity';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { User, UserRole } from '../../entities/user.entity';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -43,13 +44,18 @@ export class AdminController {
   }
 
   @Put('listings/:id/approve')
-  approveListing(@Param('id') id: string) {
-    return this.adminService.approveListing(id);
+  approveListing(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.adminService.approveListing(id, user.id);
   }
 
   @Put('listings/:id/reject')
   rejectListing(@Param('id') id: string, @Body('reason') reason?: string) {
     return this.adminService.rejectListing(id, reason);
+  }
+
+  @Get('listings/:id/pending-changes')
+  getListingWithPendingChanges(@Param('id') id: string) {
+    return this.adminService.getListingWithPendingChanges(id);
   }
 
   @Get('transactions')

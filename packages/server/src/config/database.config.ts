@@ -12,6 +12,7 @@ import { CarMetadata } from '../entities/car-metadata.entity';
 import { Favorite } from '../entities/favorite.entity';
 import { ChatConversation } from '../entities/chat-conversation.entity';
 import { ChatMessage } from '../entities/chat-message.entity';
+import { ListingPendingChanges } from '../entities/listing-pending-changes.entity';
 
 @Injectable()
 export class DatabaseConfig implements TypeOrmOptionsFactory {
@@ -37,6 +38,7 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
         Favorite,
         ChatConversation,
         ChatMessage,
+        ListingPendingChanges,
       ],
       synchronize: this.configService.get<string>('NODE_ENV') === 'development',
       logging: this.configService.get<string>('NODE_ENV') === 'development',

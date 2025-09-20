@@ -13,8 +13,6 @@ import {
   Save,
   X,
   User,
-  Plus,
-  Car,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -26,11 +24,9 @@ import {
 } from "../components/ui/Card";
 import { Avatar } from "../components/ui/Avatar";
 import { PasswordChangeForm } from "../components/PasswordChangeForm";
-import { CarCard } from "../components/CarCard";
 import { useAuthStore } from "../store/auth";
 import { ProfileService } from "../services/profile.service";
-import { ListingService } from "../services/listing.service";
-import type { User as UserType, ListingDetail } from "../types";
+import type { User as UserType } from "../types";
 
 const profileSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -54,8 +50,6 @@ export function ProfilePage() {
   const [isUploading, setIsUploading] = useState(false);
   const [user, setUser] = useState<UserType | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userListings, setUserListings] = useState<ListingDetail[]>([]);
-  const [listingsLoading, setListingsLoading] = useState(true);
   const { updateUser } = useAuthStore();
 
   const {
@@ -69,7 +63,6 @@ export function ProfilePage() {
 
   useEffect(() => {
     fetchUserProfile();
-    fetchUserListings();
   }, []);
 
   const fetchUserProfile = async () => {
@@ -144,41 +137,6 @@ export function ProfilePage() {
       toast.error(errorMessage);
     } finally {
       setIsUploading(false);
-    }
-  };
-
-  const fetchUserListings = async () => {
-    try {
-      setListingsLoading(true);
-      const response = (await ListingService.getUserListings()) as {
-        listings: ListingDetail[];
-      };
-      setUserListings(response.listings || []);
-    } catch (error) {
-      console.error("Failed to fetch user listings:", error);
-    } finally {
-      setListingsLoading(false);
-    }
-  };
-
-  const handleEditListing = (id: string) => {
-    window.location.href = `/edit-listing/${id}`;
-  };
-
-  const handleDeleteListing = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this listing?")) {
-      return;
-    }
-
-    try {
-      await ListingService.deleteListing(id);
-      toast.success("🗑️ Your listing has been deleted successfully!");
-      fetchUserListings(); // Refresh listings
-    } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message ||
-        "We couldn't delete your listing. Please try again.";
-      toast.error(errorMessage);
     }
   };
 
@@ -485,75 +443,6 @@ export function ProfilePage() {
             <PasswordChangeForm />
           </div>
         </div>
-      </div>
-
-      {/* User Listings */}
-      <div className="mt-12">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>My Listings</CardTitle>
-            <Button
-              size="sm"
-              className="bg-blue-600 text-white hover:bg-blue-700"
-              asChild
-            >
-              <a href="/sell-car">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Listing
-              </a>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {listingsLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[...Array(3)].map((_, i) => (
-                  <Card key={i} className="animate-pulse">
-                    <div className="h-48 bg-gray-200"></div>
-                    <CardContent className="p-4">
-                      <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                      <div className="h-6 bg-gray-200 rounded mb-4"></div>
-                      <div className="flex justify-between">
-                        <div className="h-4 bg-gray-200 rounded w-20"></div>
-                        <div className="h-4 bg-gray-200 rounded w-16"></div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : userListings.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {userListings.map((listing) => (
-                  <CarCard
-                    key={`${listing.id}-${user?.id || "anonymous"}`}
-                    listing={listing}
-                    showActions={true}
-                    onEdit={handleEditListing}
-                    onDelete={handleDeleteListing}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Car className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  No listings yet
-                </h3>
-                <p className="text-gray-500 mb-4">
-                  Start selling by creating your first car listing
-                </p>
-                <Button
-                  className="bg-blue-600 text-white hover:bg-blue-700"
-                  asChild
-                >
-                  <a href="/sell-car">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Your First Listing
-                  </a>
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

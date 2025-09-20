@@ -17,6 +17,8 @@ export interface CarModel {
   makeId: string;
   isActive: boolean;
   sortOrder: number;
+  bodyStyles: string[];
+  defaultBodyStyle: string;
 }
 
 export interface CarMetadata {

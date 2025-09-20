@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -39,8 +39,15 @@ type RegisterForm = z.infer<typeof registerSchema>;
 
 export function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
-  const { register: registerUser, isLoading } = useAuthStore();
+  const { register: registerUser, isLoading, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
+
+  // Redirect when authentication state changes
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const {
     register,
@@ -56,7 +63,7 @@ export function RegisterPage() {
       toast.success(
         "🎉 Welcome to CarMarket! Your account has been created successfully."
       );
-      navigate("/");
+      // Navigation will be handled by the useEffect above
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message ||

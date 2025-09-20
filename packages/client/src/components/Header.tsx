@@ -42,12 +42,20 @@ export function Header() {
               Browse Cars
             </Link>
             {isAuthenticated && (
-              <Link
-                to="/sell-car"
-                className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Sell Your Car
-              </Link>
+              <>
+                <Link
+                  to="/sell-car"
+                  className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                >
+                  Sell Your Car
+                </Link>
+                <Link
+                  to="/my-listings"
+                  className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                >
+                  My Listings
+                </Link>
+              </>
             )}
           </nav>
 

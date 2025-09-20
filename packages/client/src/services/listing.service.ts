@@ -99,4 +99,8 @@ export class ListingService {
   static async getUserListings(page: number = 1, limit: number = 10) {
     return apiClient.get("/users/listings", { page, limit });
   }
+
+  static async updateListingStatus(listingId: string, status: string) {
+    return apiClient.put(`/listings/${listingId}/status`, { status });
+  }
 }

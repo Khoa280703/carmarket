@@ -12,6 +12,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { MetadataModule } from './modules/metadata/metadata.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { LogsModule } from './modules/logs/logs.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ChatModule } from './modules/chat/chat.module';
     MetadataModule,
     FavoritesModule,
     ChatModule,
+    LogsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

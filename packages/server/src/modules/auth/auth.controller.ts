@@ -58,6 +58,12 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('me')
+  async getMe(@Request() req): Promise<User> {
+    return this.authService.findById(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(): Promise<{ message: string }> {

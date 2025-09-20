@@ -253,4 +253,11 @@ export class AdminService {
   static async getUserAnalytics(period: string = "30d"): Promise<any> {
     return apiClient.get(`/admin/analytics/users?period=${period}`);
   }
+
+  static async getListingWithPendingChanges(listingId: string): Promise<any> {
+    const response = await apiClient.get(
+      `/admin/listings/${listingId}/pending-changes`
+    );
+    return response;
+  }
 }
