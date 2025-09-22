@@ -28,6 +28,8 @@ import {
   Database,
   Plus,
   Edit,
+  Clock,
+  Activity,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -727,38 +729,6 @@ export function EnhancedAdminDashboard() {
                       </div>
                     </CardContent>
                   </Card>
-
-                  {/* Quick Actions */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Quick Actions</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Button
-                          onClick={handleSeedData}
-                          className="bg-blue-600 text-white hover:bg-blue-700"
-                        >
-                          <Database className="w-4 h-4 mr-2" />
-                          Seed Initial Data
-                        </Button>
-                        <Button
-                          onClick={() => handleTabChange("makes")}
-                          variant="outline"
-                        >
-                          <Car className="w-4 h-4 mr-2" />
-                          Manage Car Makes
-                        </Button>
-                        <Button
-                          onClick={() => handleTabChange("metadata")}
-                          variant="outline"
-                        >
-                          <Settings className="w-4 h-4 mr-2" />
-                          Manage Metadata
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
                 </div>
               )}
             </TabsContent>
@@ -1142,20 +1112,230 @@ export function EnhancedAdminDashboard() {
             {/* Analytics Tab */}
             <TabsContent value="analytics">
               <div className="space-y-6">
+                {/* Analytics Overview Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center">
+                        <div className="p-2 bg-blue-100 rounded-lg">
+                          <Users className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <div className="ml-4">
+                          <p className="text-sm font-medium text-gray-600">
+                            Total Users
+                          </p>
+                          <p className="text-2xl font-bold text-gray-900">
+                            {stats?.totalUsers || 0}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center">
+                        <div className="p-2 bg-green-100 rounded-lg">
+                          <Car className="h-6 w-6 text-green-600" />
+                        </div>
+                        <div className="ml-4">
+                          <p className="text-sm font-medium text-gray-600">
+                            Active Listings
+                          </p>
+                          <p className="text-2xl font-bold text-gray-900">
+                            {stats?.activeListings || 0}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center">
+                        <div className="p-2 bg-yellow-100 rounded-lg">
+                          <Clock className="h-6 w-6 text-yellow-600" />
+                        </div>
+                        <div className="ml-4">
+                          <p className="text-sm font-medium text-gray-600">
+                            Pending Listings
+                          </p>
+                          <p className="text-2xl font-bold text-gray-900">
+                            {stats?.pendingListings || 0}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center">
+                        <div className="p-2 bg-purple-100 rounded-lg">
+                          <TrendingUp className="h-6 w-6 text-purple-600" />
+                        </div>
+                        <div className="ml-4">
+                          <p className="text-sm font-medium text-gray-600">
+                            Total Transactions
+                          </p>
+                          <p className="text-2xl font-bold text-gray-900">
+                            {stats?.totalTransactions || 0}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Recent Activity */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <Users className="w-5 h-5 mr-2" />
+                        Recent User Growth
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">
+                            Last 7 days
+                          </span>
+                          <span className="text-2xl font-bold text-blue-600">
+                            +{stats?.recentUsers || 0}
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full"
+                            style={{
+                              width: `${Math.min((stats?.recentUsers || 0) * 10, 100)}%`,
+                            }}
+                          ></div>
+                        </div>
+                        <p className="text-sm text-gray-500">
+                          New users registered this week
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <Car className="w-5 h-5 mr-2" />
+                        Recent Listing Activity
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">
+                            Last 7 days
+                          </span>
+                          <span className="text-2xl font-bold text-green-600">
+                            +{stats?.recentListings || 0}
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-green-600 h-2 rounded-full"
+                            style={{
+                              width: `${Math.min((stats?.recentListings || 0) * 10, 100)}%`,
+                            }}
+                          ></div>
+                        </div>
+                        <p className="text-sm text-gray-500">
+                          New listings created this week
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Platform Health */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Platform Analytics</CardTitle>
+                    <CardTitle className="flex items-center">
+                      <Activity className="w-5 h-5 mr-2" />
+                      Platform Health Metrics
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-center py-12">
-                      <TrendingUp className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">
-                        Analytics Coming Soon
-                      </h3>
-                      <p className="text-gray-500">
-                        Detailed analytics and reporting features will be
-                        available soon.
-                      </p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-green-600 mb-2">
+                          {stats?.activeListings && stats?.totalListings
+                            ? Math.round(
+                                (stats.activeListings / stats.totalListings) *
+                                  100
+                              )
+                            : 0}
+                          %
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Listing Approval Rate
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-blue-600 mb-2">
+                          {stats?.totalUsers && stats?.totalListings
+                            ? Math.round(
+                                (stats.totalListings / stats.totalUsers) * 10
+                              ) / 10
+                            : 0}
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Avg Listings per User
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-purple-600 mb-2">
+                          {stats?.totalTransactions || 0}
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Total Transactions
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Quick Analytics Actions */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <BarChart3 className="w-5 h-5 mr-2" />
+                      Analytics Actions
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Button
+                        onClick={() => handleTabChange("listings")}
+                        variant="outline"
+                        className="h-20 flex flex-col items-center justify-center"
+                      >
+                        <Eye className="h-6 w-6 mb-2" />
+                        <span>View Pending Listings</span>
+                      </Button>
+                      <Button
+                        onClick={() => handleTabChange("makes")}
+                        variant="outline"
+                        className="h-20 flex flex-col items-center justify-center"
+                      >
+                        <Car className="h-6 w-6 mb-2" />
+                        <span>Manage Car Makes</span>
+                      </Button>
+                      <Button
+                        onClick={() => handleTabChange("metadata")}
+                        variant="outline"
+                        className="h-20 flex flex-col items-center justify-center"
+                      >
+                        <Database className="h-6 w-6 mb-2" />
+                        <span>Manage Metadata</span>
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -1268,16 +1448,47 @@ export function EnhancedAdminDashboard() {
                     <h2 className="text-2xl font-bold text-gray-900">
                       Metadata Management
                     </h2>
-                    <Button
-                      onClick={() =>
-                        setNewItemForm({ type: "metadata", visible: true })
-                      }
-                      className="bg-blue-600 text-white hover:bg-blue-700"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add New Metadata
-                    </Button>
+                    <div className="flex space-x-3">
+                      <Button
+                        onClick={handleSeedData}
+                        className="bg-green-600 text-white hover:bg-green-700"
+                      >
+                        <Database className="w-4 h-4 mr-2" />
+                        Seed Initial Data
+                      </Button>
+                      <Button
+                        onClick={() =>
+                          setNewItemForm({ type: "metadata", visible: true })
+                        }
+                        className="bg-blue-600 text-white hover:bg-blue-700"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add New Metadata
+                      </Button>
+                    </div>
                   </div>
+
+                  {/* Seed Data Info */}
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-start space-x-3">
+                        <div className="p-2 bg-green-100 rounded-lg">
+                          <Database className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-medium text-gray-900">
+                            Initial Data Setup
+                          </h3>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Use the "Seed Initial Data" button to populate the
+                            system with basic car makes, fuel types, body types,
+                            and features. This is essential for the platform to
+                            function properly.
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
 
                   {/* Group metadata by type */}
                   {Object.entries(
@@ -1384,8 +1595,8 @@ export function EnhancedAdminDashboard() {
 
       {/* Listing Details Modal */}
       {selectedListing && (
-        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-screen overflow-y-auto">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-screen overflow-y-auto shadow-2xl border border-gray-200">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-2xl font-semibold text-gray-900">
@@ -1825,8 +2036,8 @@ export function EnhancedAdminDashboard() {
 
       {/* Enhanced User Details Modal */}
       {selectedUser && (
-        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-200">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-semibold">User Details</h3>
               <Button
@@ -2045,8 +2256,8 @@ export function EnhancedAdminDashboard() {
 
       {/* Edit Modal */}
       {editingItem && (
-        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Edit {editingItem.type === "make" ? "Car Make" : "Metadata"}
             </h3>
@@ -2122,8 +2333,8 @@ export function EnhancedAdminDashboard() {
 
       {/* New Item Modal */}
       {newItemForm.visible && (
-        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Add New {newItemForm.type === "make" ? "Car Make" : "Metadata"}
             </h3>
@@ -2214,15 +2425,16 @@ export function EnhancedAdminDashboard() {
 
       {/* Confirmation Modal */}
       {showConfirmationModal && confirmationAction && (
-        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl border border-gray-200">
+            <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900">
                 {confirmationAction.title}
               </h3>
               <Button
                 variant="ghost"
                 size="icon"
+                className="rounded-full p-2 hover:bg-gray-100"
                 onClick={() => {
                   setShowConfirmationModal(false);
                   setConfirmationAction(null);
@@ -2252,7 +2464,7 @@ export function EnhancedAdminDashboard() {
                 </div>
               )}
 
-              <div className="flex space-x-3">
+              <div className="flex space-x-3 pt-4 border-t border-gray-200">
                 <Button
                   variant="outline"
                   onClick={() => {

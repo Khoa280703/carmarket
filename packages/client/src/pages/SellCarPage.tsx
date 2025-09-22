@@ -908,6 +908,38 @@ export function SellCarPage() {
           </CardContent>
         </Card>
 
+        {/* Car Description */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <FileText className="w-5 h-5 mr-2" />
+              Car Description (Optional)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div>
+              <label
+                htmlFor="carDescription"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Additional Car Details
+              </label>
+              <textarea
+                id="carDescription"
+                {...register("carDescription")}
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Describe any additional details about the car's condition, history, modifications, or special features..."
+              />
+              {errors.carDescription && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.carDescription.message}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Car Features */}
         <Card>
           <CardHeader>
