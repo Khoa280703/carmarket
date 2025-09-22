@@ -59,34 +59,37 @@ export interface LogsResponse {
 
 export class LogsService {
   static async getLogs(filters: LogFilters = {}): Promise<LogsResponse> {
-    const response = await apiClient.get("/logs", { params: filters });
-    return response.data;
+    const response = await apiClient.get<LogsResponse>("/logs", filters);
+    return response;
   }
 
   static async getLogStats(): Promise<LogStats> {
-    const response = await apiClient.get("/logs/stats");
-    return response.data;
+    const response = await apiClient.get<LogStats>("/logs/stats");
+    return response;
   }
 
   static async getLogById(id: string): Promise<LogEntry> {
-    const response = await apiClient.get(`/logs/${id}`);
-    return response.data;
+    const response = await apiClient.get<LogEntry>(`/logs/${id}`);
+    return response;
   }
 
   static async exportLogs(filters: LogFilters = {}): Promise<Blob> {
-    const response = await apiClient.get("/logs/export", {
+    const response = await apiClient.get<Blob>("/logs/export", {
       params: filters,
       responseType: "blob",
     });
-    return response.data;
+    return response;
   }
 
   static async cleanupOldLogs(
     days: number = 90
   ): Promise<{ message: string; deletedCount: number }> {
-    const response = await apiClient.delete("/logs/cleanup", {
+    const response = await apiClient.delete<{
+      message: string;
+      deletedCount: number;
+    }>("/logs/cleanup", {
       params: { days },
     });
-    return response.data;
+    return response;
   }
 }

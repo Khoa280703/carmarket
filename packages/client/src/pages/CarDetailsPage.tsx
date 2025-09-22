@@ -8,7 +8,6 @@ import {
   Eye,
   Heart,
   Phone,
-  Mail,
   CheckCircle,
   AlertTriangle,
   MessageCircle,

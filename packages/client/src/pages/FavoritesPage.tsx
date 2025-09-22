@@ -5,38 +5,55 @@ import {
   type FavoriteListing,
 } from "../services/favorites.service";
 import { CarCard } from "../components/CarCard";
+import { Button } from "../components/ui/Button";
 import { toast } from "react-hot-toast";
-import { Heart, Loader2 } from "lucide-react";
+import { Heart, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function FavoritesPage() {
   const { isAuthenticated } = useAuthStore();
   const [favorites, setFavorites] = useState<FavoriteListing[]>([]);
   const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 12,
+    total: 0,
+    totalPages: 0,
+  });
 
   useEffect(() => {
     if (isAuthenticated) {
       fetchFavorites();
     }
-  }, [isAuthenticated, page]);
+  }, [isAuthenticated, pagination.page, pagination.limit]);
 
   const fetchFavorites = async () => {
     try {
       setLoading(true);
-      const response = await FavoritesService.getUserFavorites(page, 12);
+      const response = await FavoritesService.getUserFavorites(
+        pagination.page,
+        pagination.limit
+      );
 
       if (response && response.favorites && Array.isArray(response.favorites)) {
-        if (page === 1) {
-          setFavorites(response.favorites);
-        } else {
-          setFavorites((prev) => [...prev, ...response.favorites]);
-        }
-
-        setHasMore(response.pagination.page < response.pagination.totalPages);
+        setFavorites(response.favorites);
+        setPagination(
+          response.pagination || {
+            page: 1,
+            limit: 12,
+            total: 0,
+            totalPages: 0,
+          }
+        );
       } else {
         setFavorites([]);
-        setHasMore(false);
+        setPagination({
+          page: 1,
+          limit: 12,
+          total: 0,
+          totalPages: 0,
+        });
       }
     } catch (error: any) {
       if (error.response?.status === 304) {
@@ -65,10 +82,19 @@ export default function FavoritesPage() {
     }
   };
 
-  const loadMore = () => {
-    if (!loading && hasMore) {
-      setPage((prev) => prev + 1);
-    }
+  const handlePageChange = (newPage: number) => {
+    setPagination((prev) => ({
+      ...prev,
+      page: newPage,
+    }));
+  };
+
+  const handleLimitChange = (newLimit: number) => {
+    setPagination((prev) => ({
+      ...prev,
+      limit: newLimit,
+      page: 1, // Reset to first page when changing limit
+    }));
   };
 
   if (!isAuthenticated) {
@@ -95,8 +121,8 @@ export default function FavoritesPage() {
             Your Favorites
           </h1>
           <p className="text-gray-600">
-            {favorites.length > 0
-              ? `You have ${favorites.length} favorite car${favorites.length !== 1 ? "s" : ""}`
+            {pagination.total > 0
+              ? `You have ${pagination.total} favorite car${pagination.total !== 1 ? "s" : ""}`
               : "No favorite cars yet"}
           </p>
         </div>
@@ -144,22 +170,97 @@ export default function FavoritesPage() {
               ))}
             </div>
 
-            {hasMore && (
-              <div className="text-center mt-8">
-                <button
-                  onClick={loadMore}
-                  disabled={loading}
-                  className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                      Loading...
-                    </>
-                  ) : (
-                    "Load More"
-                  )}
-                </button>
+            {/* Pagination */}
+            {!loading && favorites.length > 0 && pagination.totalPages > 1 && (
+              <div className="flex items-center justify-between mt-8">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-700">Show</span>
+                  <select
+                    value={pagination.limit}
+                    onChange={(e) =>
+                      handleLimitChange(parseInt(e.target.value))
+                    }
+                    className="border border-gray-300 rounded-md px-3 py-1 text-sm"
+                  >
+                    <option value={6}>6</option>
+                    <option value={12}>12</option>
+                    <option value={24}>24</option>
+                    <option value={48}>48</option>
+                  </select>
+                  <span className="text-sm text-gray-700">per page</span>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-700">
+                    Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
+                    {Math.min(
+                      pagination.page * pagination.limit,
+                      pagination.total
+                    )}{" "}
+                    of {pagination.total} results
+                  </span>
+                </div>
+
+                <div className="flex items-center space-x-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(pagination.page - 1)}
+                    disabled={pagination.page <= 1}
+                    className="flex items-center gap-1"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Previous
+                  </Button>
+
+                  <div className="flex items-center space-x-1">
+                    {Array.from(
+                      { length: Math.min(5, pagination.totalPages) },
+                      (_, i) => {
+                        let pageNum;
+                        if (pagination.totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (pagination.page <= 3) {
+                          pageNum = i + 1;
+                        } else if (
+                          pagination.page >=
+                          pagination.totalPages - 2
+                        ) {
+                          pageNum = pagination.totalPages - 4 + i;
+                        } else {
+                          pageNum = pagination.page - 2 + i;
+                        }
+
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={
+                              pagination.page === pageNum
+                                ? "default"
+                                : "outline"
+                            }
+                            size="sm"
+                            onClick={() => handlePageChange(pageNum)}
+                            className="w-8 h-8 p-0"
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      }
+                    )}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(pagination.page + 1)}
+                    disabled={pagination.page >= pagination.totalPages}
+                    className="flex items-center gap-1"
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             )}
           </>

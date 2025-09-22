@@ -351,16 +351,6 @@ export function EditListingPage() {
     );
   }
 
-  // Debug: Log metadata structure to help with debugging
-  console.log("Metadata structure:", {
-    bodyTypes: metadata.bodyTypes?.length || 0,
-    fuelTypes: metadata.fuelTypes?.length || 0,
-    transmissionTypes: metadata.transmissionTypes?.length || 0,
-    colors: metadata.colors?.length || 0,
-    conditions: metadata.conditions?.length || 0,
-    carFeatures: metadata.carFeatures?.length || 0,
-  });
-
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-6">

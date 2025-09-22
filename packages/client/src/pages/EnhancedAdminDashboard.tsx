@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Users,
   Car,
@@ -110,6 +111,19 @@ interface User {
 }
 
 export function EnhancedAdminDashboard() {
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Get active tab from URL params, default to "overview"
+  const tabFromUrl = searchParams.get("tab") as
+    | "overview"
+    | "listings"
+    | "users"
+    | "analytics"
+    | "settings"
+    | "makes"
+    | "metadata"
+    | null;
+
   const [activeTab, setActiveTab] = useState<
     | "overview"
     | "listings"
@@ -118,7 +132,7 @@ export function EnhancedAdminDashboard() {
     | "settings"
     | "makes"
     | "metadata"
-  >("overview");
+  >(tabFromUrl || "overview");
 
   // State management
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -175,9 +189,22 @@ export function EnhancedAdminDashboard() {
     undefined
   );
 
+  // Handle tab change and update URL
+  const handleTabChange = (tab: typeof activeTab) => {
+    setActiveTab(tab);
+    setSearchParams({ tab });
+  };
+
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  // Sync activeTab with URL parameter on mount
+  useEffect(() => {
+    if (tabFromUrl && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
 
   useEffect(() => {
     if (activeTab === "listings") {
@@ -281,7 +308,6 @@ export function EnhancedAdminDashboard() {
   };
 
   const handleUserAction = async (action: string, userId: string) => {
-    console.log("handleUserAction called with:", action, userId);
     try {
       switch (action) {
         case "activate":
@@ -293,7 +319,6 @@ export function EnhancedAdminDashboard() {
           toast.success("User deactivated");
           break;
         case "makeAdmin":
-          console.log("Making user admin:", userId);
           await AdminService.updateUserRole(userId, "admin");
           toast.success("User role updated to admin");
           break;
@@ -324,7 +349,6 @@ export function EnhancedAdminDashboard() {
   };
 
   const confirmAction = async () => {
-    console.log("Confirm action clicked", confirmationAction);
     if (!confirmationAction) return;
 
     const { type, target } = confirmationAction;
@@ -516,7 +540,7 @@ export function EnhancedAdminDashboard() {
         <div className="mb-8">
           <Tabs
             value={activeTab}
-            onValueChange={(value) => setActiveTab(value as any)}
+            onValueChange={(value) => handleTabChange(value as any)}
           >
             <TabsList className="grid w-full grid-cols-8">
               <TabsTrigger
@@ -679,7 +703,7 @@ export function EnhancedAdminDashboard() {
                         <Button
                           variant="outline"
                           className="h-20 flex flex-col items-center justify-center"
-                          onClick={() => setActiveTab("listings")}
+                          onClick={() => handleTabChange("listings")}
                         >
                           <Car className="h-6 w-6 mb-2" />
                           <span>Manage Listings</span>
@@ -687,7 +711,7 @@ export function EnhancedAdminDashboard() {
                         <Button
                           variant="outline"
                           className="h-20 flex flex-col items-center justify-center"
-                          onClick={() => setActiveTab("users")}
+                          onClick={() => handleTabChange("users")}
                         >
                           <Users className="h-6 w-6 mb-2" />
                           <span>Manage Users</span>
@@ -695,7 +719,7 @@ export function EnhancedAdminDashboard() {
                         <Button
                           variant="outline"
                           className="h-20 flex flex-col items-center justify-center"
-                          onClick={() => setActiveTab("analytics")}
+                          onClick={() => handleTabChange("analytics")}
                         >
                           <TrendingUp className="h-6 w-6 mb-2" />
                           <span>View Analytics</span>
@@ -719,14 +743,14 @@ export function EnhancedAdminDashboard() {
                           Seed Initial Data
                         </Button>
                         <Button
-                          onClick={() => setActiveTab("makes")}
+                          onClick={() => handleTabChange("makes")}
                           variant="outline"
                         >
                           <Car className="w-4 h-4 mr-2" />
                           Manage Car Makes
                         </Button>
                         <Button
-                          onClick={() => setActiveTab("metadata")}
+                          onClick={() => handleTabChange("metadata")}
                           variant="outline"
                         >
                           <Settings className="w-4 h-4 mr-2" />

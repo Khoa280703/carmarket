@@ -25,18 +25,21 @@ export const EnhancedSelect = React.forwardRef<
   HTMLDivElement,
   EnhancedSelectProps
 >(
-  ({
-    options,
-    value,
-    onValueChange,
-    placeholder = "Select an option",
-    searchable = true,
-    multiple = false,
-    disabled = false,
-    className,
-    error = false,
-    maxHeight = "200px",
-  }) => {
+  (
+    {
+      options,
+      value,
+      onValueChange,
+      placeholder = "Select an option",
+      searchable = true,
+      multiple = false,
+      disabled = false,
+      className,
+      error = false,
+      maxHeight = "200px",
+    },
+    ref
+  ) => {
     const [isOpen, setIsOpen] = React.useState(false);
     const [searchTerm, setSearchTerm] = React.useState("");
     const [selectedValues, setSelectedValues] = React.useState<string[]>([]);
@@ -131,7 +134,7 @@ export const EnhancedSelect = React.forwardRef<
     }, [isOpen, searchable]);
 
     return (
-      <div ref={selectRef} className={cn("relative", className)}>
+      <div ref={ref || selectRef} className={cn("relative", className)}>
         {/* Trigger Button */}
         <button
           type="button"

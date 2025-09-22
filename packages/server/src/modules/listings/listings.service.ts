@@ -96,33 +96,23 @@ export class ListingsService {
   }
 
   async findAll(page: number = 1, limit: number = 10) {
-    // Get both approved and sold listings, with approved first
-    const [approvedListings, approvedTotal] =
-      await this.listingRepository.findAndCount({
-        where: { status: ListingStatus.APPROVED, isActive: true },
-        relations: ['carDetail', 'carDetail.images', 'seller'],
-        order: { createdAt: 'DESC' },
-      });
-
-    const [soldListings, soldTotal] = await this.listingRepository.findAndCount(
-      {
-        where: { status: ListingStatus.SOLD, isActive: true },
-        relations: ['carDetail', 'carDetail.images', 'seller'],
-        order: { createdAt: 'DESC' },
+    // Get all active listings (both approved and sold) with proper ordering
+    const [listings, total] = await this.listingRepository.findAndCount({
+      where: [
+        { status: ListingStatus.APPROVED, isActive: true },
+        { status: ListingStatus.SOLD, isActive: true },
+      ],
+      relations: ['carDetail', 'carDetail.images', 'seller'],
+      order: {
+        status: 'ASC', // Approved first, then sold
+        createdAt: 'DESC',
       },
-    );
-
-    // Combine listings with approved first, then sold
-    const allListings = [...approvedListings, ...soldListings];
-    const total = approvedTotal + soldTotal;
-
-    // Apply pagination to the combined list
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginatedListings = allListings.slice(startIndex, endIndex);
+      skip: (page - 1) * limit,
+      take: limit,
+    });
 
     return {
-      listings: paginatedListings,
+      listings,
       pagination: {
         page,
         limit,

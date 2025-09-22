@@ -13,6 +13,7 @@ import { Favorite } from '../entities/favorite.entity';
 import { ChatConversation } from '../entities/chat-conversation.entity';
 import { ChatMessage } from '../entities/chat-message.entity';
 import { ListingPendingChanges } from '../entities/listing-pending-changes.entity';
+import { ActivityLog } from '../entities/activity-log.entity';
 
 @Injectable()
 export class DatabaseConfig implements TypeOrmOptionsFactory {
@@ -39,6 +40,7 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
         ChatConversation,
         ChatMessage,
         ListingPendingChanges,
+        ActivityLog,
       ],
       synchronize: this.configService.get<string>('NODE_ENV') === 'development',
       logging: this.configService.get<string>('NODE_ENV') === 'development',

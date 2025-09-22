@@ -1,5 +1,12 @@
-import { useState, useEffect } from "react";
-import { Search, Filter, Car, X } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import {
+  Search,
+  Filter,
+  Car,
+  X,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Card, CardContent } from "../components/ui/Card";
@@ -20,6 +27,14 @@ export function HomePage() {
   const [sortBy, setSortBy] = useState<string>("newest");
   const { metadata } = useMetadata();
 
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 12,
+    total: 0,
+    totalPages: 0,
+  });
+
   const sortOptions = [
     { value: "newest", label: "Newest First" },
     { value: "oldest", label: "Oldest First" },
@@ -30,6 +45,37 @@ export function HomePage() {
     { value: "mileage-low", label: "Mileage: Low to High" },
     { value: "mileage-high", label: "Mileage: High to Low" },
   ];
+
+  const fetchListings = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = (await ListingService.getListings(
+        pagination.page,
+        pagination.limit
+      )) as {
+        listings: ListingDetail[];
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
+      };
+      setListings(response.listings || []);
+      setPagination(
+        response.pagination || {
+          page: 1,
+          limit: 12,
+          total: 0,
+          totalPages: 0,
+        }
+      );
+    } catch (error) {
+      console.error("Failed to fetch listings:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [pagination.page, pagination.limit]);
 
   useEffect(() => {
     fetchListings();
@@ -42,21 +88,14 @@ export function HomePage() {
 
     window.addEventListener("focus", handleFocus);
     return () => window.removeEventListener("focus", handleFocus);
-  }, []);
+  }, [fetchListings]);
 
-  const fetchListings = async () => {
-    try {
-      setLoading(true);
-      const response = (await ListingService.getListings()) as {
-        listings: ListingDetail[];
-      };
-      setListings(response.listings || []);
-    } catch (error) {
-      console.error("Failed to fetch listings:", error);
-    } finally {
-      setLoading(false);
+  // Trigger search when pagination changes
+  useEffect(() => {
+    if (searchQuery.trim() || Object.keys(filters).length > 0) {
+      handleSearch();
     }
-  };
+  }, [pagination.page, pagination.limit]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim() && Object.keys(filters).length === 0) {
@@ -72,10 +111,20 @@ export function HomePage() {
           make: searchQuery,
           model: searchQuery,
         }),
+        page: pagination.page,
+        limit: pagination.limit,
       };
 
       const response = await ListingService.searchListings(searchFilters);
       setListings(response.listings || []);
+      setPagination(
+        response.pagination || {
+          page: 1,
+          limit: 12,
+          total: 0,
+          totalPages: 0,
+        }
+      );
     } catch (error) {
       console.error("Search failed:", error);
     } finally {
@@ -88,6 +137,21 @@ export function HomePage() {
     setSearchQuery("");
     setShowFilters(false);
     fetchListings();
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setPagination((prev) => ({
+      ...prev,
+      page: newPage,
+    }));
+  };
+
+  const handleLimitChange = (newLimit: number) => {
+    setPagination((prev) => ({
+      ...prev,
+      limit: newLimit,
+      page: 1, // Reset to first page when changing limit
+    }));
   };
 
   const sortListings = (listingsToSort: ListingDetail[]) => {
@@ -493,6 +557,93 @@ export function HomePage() {
               <p className="text-gray-500">
                 Try adjusting your search criteria
               </p>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {!loading && listings.length > 0 && (
+            <div className="flex items-center justify-between mt-8">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-700">Show</span>
+                <select
+                  value={pagination.limit}
+                  onChange={(e) => handleLimitChange(parseInt(e.target.value))}
+                  className="border border-gray-300 rounded-md px-3 py-1 text-sm"
+                >
+                  <option value={6}>6</option>
+                  <option value={12}>12</option>
+                  <option value={24}>24</option>
+                  <option value={48}>48</option>
+                </select>
+                <span className="text-sm text-gray-700">per page</span>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-700">
+                  Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
+                  {Math.min(
+                    pagination.page * pagination.limit,
+                    pagination.total
+                  )}{" "}
+                  of {pagination.total} results
+                </span>
+              </div>
+
+              <div className="flex items-center space-x-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                  disabled={pagination.page <= 1}
+                  className="flex items-center gap-1"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </Button>
+
+                <div className="flex items-center space-x-1">
+                  {Array.from(
+                    { length: Math.min(5, pagination.totalPages) },
+                    (_, i) => {
+                      let pageNum;
+                      if (pagination.totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (pagination.page <= 3) {
+                        pageNum = i + 1;
+                      } else if (pagination.page >= pagination.totalPages - 2) {
+                        pageNum = pagination.totalPages - 4 + i;
+                      } else {
+                        pageNum = pagination.page - 2 + i;
+                      }
+
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={
+                            pagination.page === pageNum ? "default" : "outline"
+                          }
+                          size="sm"
+                          onClick={() => handlePageChange(pageNum)}
+                          className="w-8 h-8 p-0"
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    }
+                  )}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                  disabled={pagination.page >= pagination.totalPages}
+                  className="flex items-center gap-1"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           )}
         </div>

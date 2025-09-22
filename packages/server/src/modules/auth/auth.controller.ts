@@ -17,6 +17,8 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { LocalAuthGuard } from '../../common/guards/local-auth.guard';
 import { AuthResponse } from './interfaces/auth-response.interface';
 import { User } from '../../entities/user.entity';
+import { LogAction } from '../../common/decorators/log-action.decorator';
+import { LogCategory } from '../../entities/activity-log.entity';
 
 @Controller('auth')
 export class AuthController {
@@ -24,6 +26,11 @@ export class AuthController {
 
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
+  @LogAction({
+    category: LogCategory.AUTHENTICATION,
+    message: 'User Registration',
+    description: 'New user registered successfully',
+  })
   async register(@Body() registerDto: RegisterDto): Promise<AuthResponse> {
     return this.authService.register(registerDto);
   }
@@ -31,6 +38,11 @@ export class AuthController {
   @UseGuards(LocalAuthGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @LogAction({
+    category: LogCategory.AUTHENTICATION,
+    message: 'User Login',
+    description: 'User logged in successfully',
+  })
   async login(@Body() loginDto: LoginDto): Promise<AuthResponse> {
     return this.authService.login(loginDto);
   }

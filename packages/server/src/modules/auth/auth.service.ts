@@ -164,7 +164,6 @@ export class AuthService {
 
     // TODO: Send email with reset token
     // For now, we'll just log it (in production, implement email service)
-    console.log(`Password reset token for ${email}: ${resetToken}`);
 
     return {
       message:
@@ -216,6 +215,22 @@ export class AuthService {
 
     delete user.password;
     return user;
+  }
+
+  async findByEmail(email: string): Promise<User> {
+    const user = await this.userRepository.findOne({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
+
+  async updateUser(user: User): Promise<User> {
+    return this.userRepository.save(user);
   }
 
   private generateResetToken(): string {

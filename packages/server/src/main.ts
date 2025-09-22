@@ -7,6 +7,9 @@ import { AppModule } from './app.module';
 import { Server as SocketIOServer } from 'socket.io';
 import { ChatService } from './modules/chat/chat.service';
 import { JwtService } from '@nestjs/jwt';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { LoggingExceptionFilter } from './common/filters/logging-exception.filter';
+import { LogsService } from './modules/logs/logs.service';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -33,10 +36,19 @@ async function bootstrap() {
     }),
   );
 
+  // Global logging interceptor
+  const logsService = app.get(LogsService);
+  app.useGlobalInterceptors(new LoggingInterceptor(logsService));
+
+  // Global exception filter
+  app.useGlobalFilters(new LoggingExceptionFilter(logsService));
+
   // Global prefix
   app.setGlobalPrefix('api');
 
   const port = configService.get<number>('PORT', 3000);
+
+  app.enableShutdownHooks();
 
   // Start the NestJS application first
   await app.listen(port);
@@ -77,8 +89,8 @@ async function bootstrap() {
       const payload = await jwtService.verifyAsync(token, {
         secret: process.env.JWT_SECRET,
       });
-      userId = payload.sub || payload.userId;
-    } catch (error) {
+      userId = (payload as any).sub || (payload as any).userId;
+    } catch {
       socket.disconnect();
       return;
     }
@@ -89,11 +101,11 @@ async function bootstrap() {
     }
 
     // Join user to their personal room for notifications
-    socket.join(`user:${userId}`);
+    void socket.join(`user:${userId}`);
 
     // Join conversation room for real-time updates
     socket.on('joinConversation', (conversationId: string) => {
-      socket.join(`conversation:${conversationId}`);
+      void socket.join(`conversation:${conversationId}`);
     });
 
     socket.on('disconnect', () => {
@@ -103,4 +115,4 @@ async function bootstrap() {
   console.log(`🚀 Server running on http://localhost:${port}`);
   console.log(`🔌 Socket.IO server running on /chat namespace`);
 }
-bootstrap();
+void bootstrap();
