@@ -88,9 +88,28 @@ export class ChatService {
     return response as ConversationResponse;
   }
 
-  static async getUserConversations(): Promise<ChatConversation[]> {
-    const response = await apiClient.get("/chat");
-    return response as ChatConversation[];
+  static async getUserConversations(
+    page: number = 1,
+    limit: number = 10
+  ): Promise<{
+    conversations: ChatConversation[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }> {
+    const response = await apiClient.get(`/chat?page=${page}&limit=${limit}`);
+    return response as {
+      conversations: ChatConversation[];
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+      };
+    };
   }
 
   static async markAsRead(conversationId: string): Promise<void> {

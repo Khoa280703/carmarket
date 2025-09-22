@@ -30,7 +30,7 @@ export function NotificationProvider({
 
     try {
       const response = await ChatService.getUserConversations();
-      setConversations(response);
+      setConversations(response.conversations);
 
       // Get actual unread count from backend (with separate error handling)
       try {

@@ -1,6 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Car, ArrowUpDown } from "lucide-react";
+import {
+  Plus,
+  Car,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { Button } from "../components/ui/Button";
 import {
   Card,
@@ -35,6 +41,14 @@ export function MyListingsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [listingToDelete, setListingToDelete] = useState<string | null>(null);
 
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0,
+  });
+
   const sortOptions = [
     { value: "newest", label: "Newest First" },
     { value: "oldest", label: "Oldest First" },
@@ -43,25 +57,36 @@ export function MyListingsPage() {
     { value: "status", label: "Status" },
   ];
 
+  const fetchUserListings = useCallback(async () => {
+    try {
+      setListingsLoading(true);
+      const response = await ListingService.getUserListings(
+        pagination.page,
+        pagination.limit
+      );
+      setUserListings((response as any).listings || []);
+      setPagination(
+        (response as any).pagination || {
+          page: 1,
+          limit: 10,
+          total: 0,
+          totalPages: 0,
+        }
+      );
+    } catch (error: any) {
+      toast.error("Failed to load your listings");
+    } finally {
+      setListingsLoading(false);
+    }
+  }, [pagination.page, pagination.limit]);
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchUserListings();
     } else {
       setListingsLoading(false);
     }
-  }, [isAuthenticated]);
-
-  const fetchUserListings = async () => {
-    try {
-      setListingsLoading(true);
-      const response = await ListingService.getUserListings();
-      setUserListings((response as any).listings || []);
-    } catch (error: any) {
-      toast.error("Failed to load your listings");
-    } finally {
-      setListingsLoading(false);
-    }
-  };
+  }, [isAuthenticated, fetchUserListings]);
 
   const handleEdit = (id: string) => {
     navigate(`/edit-listing/${id}`);
@@ -81,12 +106,29 @@ export function MyListingsPage() {
         prev.filter((listing) => listing.id !== listingToDelete)
       );
       toast.success("Listing deleted successfully");
+      // Refresh the current page
+      fetchUserListings();
     } catch (error: any) {
       toast.error("Failed to delete listing");
     } finally {
       setShowDeleteConfirm(false);
       setListingToDelete(null);
     }
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setPagination((prev) => ({
+      ...prev,
+      page: newPage,
+    }));
+  };
+
+  const handleLimitChange = (newLimit: number) => {
+    setPagination((prev) => ({
+      ...prev,
+      limit: newLimit,
+      page: 1, // Reset to first page when changing limit
+    }));
   };
 
   const handleMarkAsSold = (id: string) => {
@@ -246,6 +288,100 @@ export function MyListingsPage() {
                   <Plus className="w-4 h-4 mr-2" />
                   Create Your First Listing
                 </Button>
+              </div>
+            )}
+
+            {/* Pagination */}
+            {!listingsLoading && userListings.length > 0 && (
+              <div className="flex items-center justify-between mt-6">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-700">Show</span>
+                  <select
+                    value={pagination.limit}
+                    onChange={(e) =>
+                      handleLimitChange(parseInt(e.target.value))
+                    }
+                    className="border border-gray-300 rounded-md px-3 py-1 text-sm"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                  <span className="text-sm text-gray-700">per page</span>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-700">
+                    Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
+                    {Math.min(
+                      pagination.page * pagination.limit,
+                      pagination.total
+                    )}{" "}
+                    of {pagination.total} results
+                  </span>
+                </div>
+
+                <div className="flex items-center space-x-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(pagination.page - 1)}
+                    disabled={pagination.page <= 1}
+                    className="flex items-center gap-1"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Previous
+                  </Button>
+
+                  <div className="flex items-center space-x-1">
+                    {Array.from(
+                      { length: Math.min(5, pagination.totalPages) },
+                      (_, i) => {
+                        let pageNum;
+                        if (pagination.totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (pagination.page <= 3) {
+                          pageNum = i + 1;
+                        } else if (
+                          pagination.page >=
+                          pagination.totalPages - 2
+                        ) {
+                          pageNum = pagination.totalPages - 4 + i;
+                        } else {
+                          pageNum = pagination.page - 2 + i;
+                        }
+
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={
+                              pagination.page === pageNum
+                                ? "default"
+                                : "outline"
+                            }
+                            size="sm"
+                            onClick={() => handlePageChange(pageNum)}
+                            className="w-8 h-8 p-0"
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      }
+                    )}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(pagination.page + 1)}
+                    disabled={pagination.page >= pagination.totalPages}
+                    className="flex items-center gap-1"
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>

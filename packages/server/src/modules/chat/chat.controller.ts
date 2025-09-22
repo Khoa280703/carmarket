@@ -46,8 +46,16 @@ export class ChatController {
   }
 
   @Get()
-  getUserConversations(@CurrentUser() user: User) {
-    return this.chatService.getUserConversations(user.id);
+  getUserConversations(
+    @CurrentUser() user: User,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '10',
+  ) {
+    return this.chatService.getUserConversations(
+      user.id,
+      parseInt(page),
+      parseInt(limit),
+    );
   }
 
   @Get(':conversationId')

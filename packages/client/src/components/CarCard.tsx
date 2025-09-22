@@ -151,9 +151,6 @@ export function CarCard({
       window.location.href = `/chat/${response.conversation.id}`;
     } catch (error: any) {
       console.error("Failed to start conversation:", error);
-      console.error("Error response:", error.response);
-      console.error("Error status:", error.response?.status);
-      console.error("Error data:", error.response?.data);
 
       const errorMessage =
         error.response?.data?.message || "Failed to start conversation";

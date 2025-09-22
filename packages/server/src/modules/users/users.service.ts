@@ -127,7 +127,7 @@ export class UsersService {
   async getUserListings(userId: string, page: number = 1, limit: number = 10) {
     const [listings, total] = await this.listingRepository.findAndCount({
       where: { sellerId: userId },
-      relations: ['carDetail', 'carDetail.images'],
+      relations: ['carDetail', 'carDetail.images', 'seller'],
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,

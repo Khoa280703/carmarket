@@ -286,7 +286,6 @@ export function ChatPage() {
       toast.success("Message sent!");
     } catch (error: any) {
       console.error("Failed to send message:", error);
-      console.error("Error response:", error.response);
 
       // Restore the message to input if sending failed
       setNewMessage(messageContent);

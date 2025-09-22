@@ -63,7 +63,20 @@ class ApiClient {
 
   // Generic methods
   async get<T>(url: string, params?: any): Promise<T> {
-    const response: AxiosResponse<T> = await this.client.get(url, { params });
+    // Build query string manually
+    let queryString = "";
+    if (params && Object.keys(params).length > 0) {
+      const searchParams = new URLSearchParams();
+      for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined && value !== null && value !== "") {
+          searchParams.append(key, String(value));
+        }
+      }
+      queryString = searchParams.toString();
+    }
+
+    const fullUrl = queryString ? `${url}?${queryString}` : url;
+    const response: AxiosResponse<T> = await this.client.get(fullUrl);
     return response.data;
   }
 

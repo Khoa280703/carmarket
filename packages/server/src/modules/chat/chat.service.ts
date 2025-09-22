@@ -153,20 +153,35 @@ export class ChatService {
     };
   }
 
-  async getUserConversations(userId: string) {
-    const conversations = await this.conversationRepository.find({
-      where: [{ buyerId: userId }, { sellerId: userId }],
-      relations: [
-        'buyer',
-        'seller',
-        'listing',
-        'listing.carDetail',
-        'listing.carDetail.images',
-      ],
-      order: { lastMessageAt: 'DESC' },
-    });
+  async getUserConversations(
+    userId: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
+    const [conversations, total] =
+      await this.conversationRepository.findAndCount({
+        where: [{ buyerId: userId }, { sellerId: userId }],
+        relations: [
+          'buyer',
+          'seller',
+          'listing',
+          'listing.carDetail',
+          'listing.carDetail.images',
+        ],
+        order: { lastMessageAt: 'DESC' },
+        skip: (page - 1) * limit,
+        take: limit,
+      });
 
-    return conversations;
+    return {
+      conversations,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async markMessagesAsRead(conversationId: string, userId: string) {
