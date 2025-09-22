@@ -69,6 +69,7 @@ export function EditListingPage() {
   const [listing, setListing] = useState<ListingDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
+  const [currentImages, setCurrentImages] = useState<any[]>([]);
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedMakeId, setSelectedMakeId] = useState<string>("");
@@ -173,6 +174,10 @@ export function EditListingPage() {
     setUploadedImages((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleDeleteCurrentImage = (index: number) => {
+    setCurrentImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const toggleFeature = (feature: string) => {
     setSelectedFeatures((prev) =>
       prev.includes(feature)
@@ -220,6 +225,11 @@ export function EditListingPage() {
 
       // Set features state
       setSelectedFeatures(response.carDetail.features || []);
+
+      // Set current images for display
+      if (response.carDetail.images && response.carDetail.images.length > 0) {
+        setCurrentImages(response.carDetail.images);
+      }
     } catch (error) {
       toast.error("Failed to load listing details");
       navigate("/profile");
@@ -987,6 +997,40 @@ export function EditListingPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
+              {/* Current Images */}
+              {currentImages.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Current Images
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {currentImages.map((image, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={`http://localhost:3000${image.url}`}
+                          alt={`Current image ${index + 1}`}
+                          className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                          onError={(e) => {
+                            console.error("Failed to load image:", image.url);
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                        <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                          Current
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCurrentImage(index)}
+                          className="absolute top-2 left-2 bg-red-500 hover:bg-red-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label
                   htmlFor="images"
